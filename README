@@ -1,0 +1,73 @@
+Hosted at: http://github.com/Hexstream/loopless
+
+
+LOOPless contains utilities that provide a compelling alternative to
+LOOP for the vast majority of its use-cases. Most of these utilities
+are straightforward to learn and use, and are consistent in style with
+other standard Common Lisp constructs. All of them are easily
+composable with the rest of the language, unlike LOOP's monolithic
+approach.
+
+As such, LOOPless helps you use LOOP less, or even go completely
+LOOP-less, if you're so inclined. LOOP's full generality is seldom
+needed and using simpler, more focussed constructs when appropriate
+results in less conceptual complexity, in my opinion. I believe
+that using LOOP less results in appreciating the rest of the language
+more.
+
+examples.lisp contains many examples of conversion from LOOP to
+LOOPless style, in roughly increasing order of complexity. You'll see that
+even some complex scenarios which LOOP seems especially well-suited
+for can be implemented conveniently without LOOP.
+
+
+
+Most of the utilities contained therein have the particularity that
+they're redundant and worthless if you're fully satisfied with using
+LOOP all the time. But if you want to use LOOP less with the least
+difficulty possible, LOOPless might be the library for you.
+
+It has proven difficult for me to replace my usages of LOOP with
+alternatives already provided by the standard because of what I
+perceive as lackings in the language brought forth by the existence of
+LOOP. Indeed, someone who has already adopted LOOP for iteration over,
+say, alists and plists wouldn't mind the lack of MAPCAR-like functions
+for easy iteration over such data structures.
+
+LOOPless provides many similarly intuitive extensions to the language.
+Taken individually, these may not look like much but together they
+take much of the guesswork out of converting (mentally or textually) a
+LOOP to another looping construct by providing an unambiguously best
+alternative in most cases.
+
+
+When you evaluate the relevance of the existence of LOOPless, please
+keep in mind how much you may have struggled as a newbie to learn how
+to use LOOP and all its intricacies. I believe that given a newbie
+with no prior exposure to either LOOP or LOOPless, LOOPless should be
+much easier to learn. The learning curve of LOOPless compared to LOOP
+is much smoother because you can gainfully use any utility it provides
+on its own without first learning a bunch of concepts, like you need
+to do prior to using any of LOOP's features. I believe learning 10% of
+LOOPless will take you farther than learning 10% of LOOP (and LOOPLESS
+is much smaller than LOOP).
+
+Moreover, because of its similarity with the rest of what the standard
+already provides, LOOPless builds on and reinforces what has already
+been learned. For instance, once you understand MAPL/MAPLIST/MAPCON
+for iteration over list tails, understanding MAPAL/MAPALIST/MAPACON
+for iteration over alist entries is trivial.
+
+While it's true that eventual mastery of LOOP is a requirement because
+of its omnipresence, I think it is worthwhile to delay its learning.
+Common Lisp newbies already have enough stumbling blocks to clear
+before being able to make effective use of this wonderful language as
+it is.
+
+Note that while I tout the advantages of LOOPless for newbies,
+I think masters alike can appreciate the style that it enables.
+
+
+This library is under the MIT license
+so you can do basically whatever with it.
+See the LICENSE file for details.
