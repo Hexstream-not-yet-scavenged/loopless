@@ -40,7 +40,9 @@
 
 
 ;; Not exported but used below.
-(eval-when (:compile-toplevel :load-toplevel :execute)
+(defmacro with-unique-names ((&rest bindings) &body body)
+  "Executes a series of forms with each var bound to a fresh,
+uninterned symbol. See http://www.cliki.net/WITH-UNIQUE-NAMES"
   (flet ((binding-parts (binding)
 	   "Return (values var prefix) from a WITH-UNIQUE-NAMES binding
 form. If PREFIX is not given in the binding, NIL is returned to
@@ -48,39 +50,30 @@ indicate that the default should be used."
 	   (if (consp binding)
 	       (values (first binding) (second binding))
 	       (values binding nil))))
-      (defmacro with-unique-names ((&rest bindings) &body body)
-      "Executes a series of forms with each var bound to a fresh,
-uninterned symbol. See http://www.cliki.net/WITH-UNIQUE-NAMES"
-      `(let ,(mapcar #'(lambda (binding)
-			 (multiple-value-bind (var prefix)
-			     (binding-parts binding)
-			   (check-type var symbol)
-			   `(,var (gensym ,(format nil "~A"
-						   (or prefix var))))))
-	      bindings)
-	 ,@body)))
+    `(let ,(mapcar #'(lambda (binding)
+		       (multiple-value-bind (var prefix)
+			   (binding-parts binding)
+			 (check-type var symbol)
+			 `(,var (gensym ,(format nil "~A"
+						 (or prefix var))))))
+	    bindings)
+       ,@body)))
   
-  (flet ((check-names (names)
-	   "Check that all of the NAMES are symbols. If not, raise an error."
-	   ;; This only raises an error for the first non-symbol argument
-	   ;; found. While this won't report multiple errors, it is probably
-	   ;; more convenient to only report one.
-	   (let ((bad-name (find-if-not #'symbolp names)))
-	     (when bad-name
-	       (error "ONCE-ONLY expected a symbol but got ~S" bad-name)))))
-    (defmacro once-only (names &body body)
-      ;; Check the NAMES list for validity.
-      (check-names names)
-      ;; Do not touch this code unless you really know what you're doing.
-      (let ((gensyms (loop for name in names collect (gensym (string name)))))
-	`(let (,@(loop for g in gensyms
-		       for name in names
-		       collect `(,g (gensym ,(string name)))))
-	   `(let (,,@(loop for g in gensyms for n in names
-			   collect ``(,,g ,,n)))
-	      ,(let (,@(loop for n in names for g in gensyms
-			     collect `(,n ,g)))
-		 ,@body)))))))
+(defmacro once-only (names &body body)
+  ;; Check the NAMES list for validity.
+  (let ((bad-name (find-if-not #'symbolp names)))
+    (when bad-name
+      (error "ONCE-ONLY expected a symbol but got ~S" bad-name)))
+  ;; Do not touch this code unless you really know what you're doing.
+  (let ((gensyms (loop for name in names collect (gensym (string name)))))
+    `(let (,@(loop for g in gensyms
+		   for name in names
+		   collect `(,g (gensym ,(string name)))))
+       `(let (,,@(loop for g in gensyms for n in names
+		       collect ``(,,g ,,n)))
+	  ,(let (,@(loop for n in names for g in gensyms
+			 collect `(,n ,g)))
+	     ,@body)))))
 
 (flet ((split-required-and-other-args (args)
 	 (let* ((other-args (member-if (lambda (thing)
