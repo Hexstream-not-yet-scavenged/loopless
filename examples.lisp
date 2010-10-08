@@ -9,7 +9,7 @@
 ;;;; part of the latter with LL, the package nickname of LOOPless.
 
 
-;;;; -----------------------------------------------------------------
+;;;; -- Reading forms from a stream with WHILE* ----------------------
 
 
 (with-input-from-string (stream "some (simple \"forms\") #(to read)")
@@ -29,8 +29,11 @@
 ;; but notice that each of COLLECTING/COLLECT, LET, WHILE* and SETF
 ;; does only one thing and can be used with the rest of the language.
 
+;; Also, LET and SETF are conveniently already part of the language.
 
-;;;; -----------------------------------------------------------------
+
+;;;; -- Using for-as-arithmetic outside of LOOP with FOR* ------------
+
 
 (loop for element in '(a b c)
       for i downfrom 10 by 3
@@ -44,7 +47,12 @@
 	    (list element i (* i 10))))
 	'(a b c))
 
-;;;; -----------------------------------------------------------------
+;; There is a frequent need to have arithmetic stepping of a variable.
+;; Thanks to FOR*, you can combine LOOP's intuitive syntax
+;; for this with any looping construct whatsoever.
+
+
+;;;; -- Using MAPALIST to map over an alist much like MAPCAR ---------
 
 
 (loop for (key . value) in '((a . 1) (b . 2) (c . 3))
@@ -56,8 +64,13 @@
 	       (list key (- value)))
 	     '((a . 1) (b . 2) (c . 3)))
 
+;; Once you know MAPL/MAPLIST/MAPCON,
+;;      learning MAPAL/MAPALIST/MAPACON,
+;;               MAPAL*/MAPALIST*/MAPACON* and
+;;               MAPPL/MAPPLIST/MAPPCON is trivial.
 
-;;;; -----------------------------------------------------------------
+
+;;;; -- Using MAPCAN when you need to both collect and nconc ---------
 
 
 (loop for element in '(a 24 x y 86 "test" (nested stuff))
@@ -70,7 +83,6 @@
 
 ;; ==> (A -24 X Y -86 NESTED STUFF)
 
-;; Here I'm not actually using anything new provided by LOOPless.
 (mapcan (lambda (element)
 	  (typecase element
 	    (symbol (list element))
@@ -78,8 +90,11 @@
 	    (list (copy-seq element))))
 	'(a 24 x y 86 "test" (nested stuff)))
 
+;; Here I'm not actually using anything new provided by LOOPless.
+;; Sometimes the standard already provides suitable alternatives to LOOP.
 
-;;;; -----------------------------------------------------------------
+
+;;;; -- Using with-collectors to collect into different lists  -------
 
 
 (loop for element across #(a 24 b "test" 86 "this" c)
@@ -102,7 +117,17 @@
       (number (numbers element))
       (string (strings element)))))
 
-;;;; -----------------------------------------------------------------
+;; Notice how we can use ETYPECASE
+;; because we don't have to conform to LOOP syntax.
+
+;; It's true that ITERATE doesn't have that problem,
+;; but with LOOPless you'll need a LOOP-like construct
+;; so rarely that LOOP's quirks are less of a problem.
+;; Conversely, ITERATE's marginal advantages
+;; over LOOP are less compelling.
+
+
+;;;; -- Using FOR* for intuitive stepping of multiple variables ------
 
 
 (loop for element in '(a b c)
@@ -132,7 +157,7 @@
 	'(a b c))
 
 
-;;;; -----------------------------------------------------------------
+;;;; -- Using DESTRUCTURING-LAMBDA to destructure required args ------
 
 
 (loop for (key (symbol count))
@@ -141,9 +166,25 @@
 
 ;; ==> (:REPEAT A :THESE B :THESE B :THESE B :SOMEHOW C :SOMEHOW C)
 
-(LL:mappcon (LL:destructuring-lambda (key (symbol count))
-	      (LL:collecting
-		(LL:dotimes* (count)
-		  (LL:collect key)
-		  (LL:collect symbol))))
-	    '(:repeat (a 1) :these (b 3) :somehow (c 2)))
+(LL:mappcon
+ (LL:destructuring-lambda (key (symbol count))
+   (LL:collecting
+     (LL:dotimes* (count)
+       (LL:collect key)
+       (LL:collect symbol))))
+ '(:repeat (a 1) :these (b 3) :somehow (c 2)))
+
+;; When using functions in the "MAP* family", there's a frequent need
+;; for a lambda which immediately destructures one or more of its args.
+
+;; Using an explicit lambda is cumbersome because you have to name
+;; the variable and then immediately pass it to DESTRUCTURING-BIND.
+;; Moreover, writing it out uses an additional indentation level.
+
+;; Speaking of indentation, when you're MISERable an easy trick for
+;; great space savings is to format the mapping function like I did here.
+;; These kinds of functions stay very readable when the function arg
+;; is an explicit lambda despite being formatted this way,
+;; because the additional indentation level this results in
+;; ensures that the subsequent arg is isolated and easily spotted.
+;; This paragraph is sloppily written.

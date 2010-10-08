@@ -390,4 +390,7 @@ alternative to (loop repeat count do body finally result)."
        ,@body)))
 
 (defmacro while* (test &body body)
+  "TEST is evaluated. If the result is true, then BODY is executed as
+an implicit PROGN, else the loop terminates. This cycle repeats as
+long as TEST evaluates to true."
   `(loop while ,test do (progn ,@body)))
