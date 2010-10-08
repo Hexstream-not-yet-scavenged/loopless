@@ -11,6 +11,27 @@
 
 ;;;; -----------------------------------------------------------------
 
+
+(with-input-from-string (stream "some (simple \"forms\") #(to read)")
+  (loop for form = (read stream nil nil)
+	while form
+	collect form))
+
+;; ==> (SOME (SIMPLE "forms") #(TO READ))
+
+(with-input-from-string (stream "some (simple \"forms\") #(to read)")
+  (LL:collecting
+    (let (form)
+      (LL:while* (setf form (read stream nil nil))
+	(LL:collect form)))))
+
+;; This may not look much better than the LOOP way at first,
+;; but notice that each of COLLECTING/COLLECT, LET, WHILE* and SETF
+;; does only one thing and can be used with the rest of the language.
+
+
+;;;; -----------------------------------------------------------------
+
 (loop for element in '(a b c)
       for i downfrom 10 by 3
       collect (list element i (* i 10)))

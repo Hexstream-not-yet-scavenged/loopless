@@ -26,7 +26,8 @@
 	   #:doalist*
 	   #:doplist
 	   #:dovector
-	   #:dotimes*))
+	   #:dotimes*
+	   #:while*))
 
 (in-package #:loopless)
 
@@ -387,3 +388,6 @@ alternative to (loop repeat count do body finally result)."
   (with-unique-names (ignored-var)
     `(dotimes (,ignored-var ,count ,@(if result (list result)))
        ,@body)))
+
+(defmacro while* (test &body body)
+  `(loop while ,test do (progn ,@body)))
