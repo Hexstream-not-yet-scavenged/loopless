@@ -39,6 +39,9 @@
 ;;;; work has been invested in optimizing LOOP to death for common
 ;;;; cases so it makes sense to leverage that.
 
+;;; WITH-UNIQUE-NAMES, ONCE-ONLY, COMPOSE, COLLECTING and
+;;; WITH-COLLECTORS implementations from cl-utilities
+;;; (with minor adaptations).
 
 ;; Not exported but used below.
 (defmacro with-unique-names ((&rest bindings) &body body)
