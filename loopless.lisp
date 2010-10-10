@@ -371,7 +371,16 @@ they were given."
 						 (setf (cdr ,tail)
 						       (setf ,tail (list thing)))
 						 (setf ,collector
-						       (setf ,tail (list thing))))))
+						       (setf ,tail (list thing))))
+					     THING)
+			collect `(,(intern (format nil "N~A" collector))
+					   (list)
+					   (if ,collector
+					       (setf (cdr ,tail) list)
+					       (setf ,collector list))
+					   (if list
+					       (setf ,tail (last list)))
+					   nil))
 	   ,@body)
 	 (values ,@collectors)))))
 
