@@ -29,10 +29,11 @@ difficulty possible, LOOPless might be the library for you.
 
 It has proven difficult for me to replace my usages of LOOP with
 alternatives already provided by the standard because of what I
-perceive as lackings in the language brought forth by the existence of
-LOOP. Indeed, someone who has already adopted LOOP for iteration over,
-say, alists and plists wouldn't mind the lack of MAPCAR-like functions
-for easy iteration over such data structures.
+perceive as small but significant lackings in the language brought
+forth by the existence of LOOP. Indeed, someone who has already
+adopted LOOP for iteration over, say, alists and plists wouldn't mind
+the lack of MAPCAR-like functions for easy iteration over such data
+structures.
 
 LOOPless provides many similarly intuitive extensions to the language.
 Taken individually, these may not look like much but together they
