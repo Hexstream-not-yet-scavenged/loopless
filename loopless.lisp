@@ -106,13 +106,30 @@ destructuring patterns as in DESTRUCTURING-BIND."
 		     destructures
 		     :from-end t :initial-value body))))))
 
-;;; These functions are analogous to MAPC/MAPCAR/MAPCAN
-;;; and MAPL/MAPLIST/MAPCON, but for alists and plists.
 
-;;; I'm somewhat conflicted about the naming of these functions.
-;;; Basing the names on MAPL/MAPLIST/MAPCON like I did
-;;; yields more intuitive, nicer names.
-;;; However, the behavior is more similar to MAPC/MAPCAR/MAPCAN.
+;;; The following functions are analogous to MAPC/MAPCAR/MAPCAN
+;;; and MAPL/MAPLIST/MAPCON, but for alists and plists.
+;;;
+;;; ┌───┬────────────────────────────┬────────┬───────────┬──────────┐
+;;; │PKG│         Result acc. method │ nil    │ list      │ nconc    │
+;;; ├───┼────────────────────────────┼────────┼───────────┼──────────┤
+;;; │   │      Structure mapped over │        │           │          │
+;;; │   │                            │        │           │          │
+;;; │CL │         elements of a list │ MAPC   │ MAPCAR    │ MAPCAN   │
+;;; │CL │           conses of a list │ MAPL   │ MAPLIST   │ MAPCON   │
+;;; │   │                            │        │           │          │
+;;; │LL │ (key . value)s of an alist │ MAPAL  │ MAPALIST  │ MAPACON  │
+;;; │LL │   (key value)s of an alist │ MAPAL* │ MAPALIST* │ MAPACON* │
+;;; │LL │    (key value)s of a plist │ MAPPL  │ MAPPLIST  │ MAPPCON  │
+;;; └───┴────────────────────────────┴────────┴───────────┴──────────┘
+;;;
+;;; Note that the names of the new functions
+;;; are constructed in a consistent way, based on MAPL/MAPLIST/MAPCON:
+;;; MAP, then
+;;; A or P, depending on what we're dealing with (alist or plist), then
+;;; L, LIST or CON depending on accumulation method (nil, list or nconc).
+;;; And finally, a star if the alist has its values
+;;; in the second element instead of the cdr. The former is less common.
 
 (defun mapal (function alist &rest more-alists)
   "Analogous to MAPL but for alists. The FUNCTION is passed two
@@ -204,9 +221,11 @@ called at least once.
 
 FOR* deals with stepping of variables only.
 It never initiates a termination of looping.
+This is to avoid interfering with the semantics
+of the looping construct we're wrapping.
 
-Each binding is (VAR . STEPPING). Here are the supported STEPPING
-clauses:
+Each binding is (VAR . STEPPING).
+Here are the supported STEPPING clauses:
 
 for-as-arithmetic: you can use FROM, UPFROM, DOWNFROM and BY like you
 would with LOOP: \"FROM start\" or \"UPFROM start\" for incrementing
