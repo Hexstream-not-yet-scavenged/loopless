@@ -19,6 +19,7 @@
 	   #:step*
 	   #:collecting ; Todo: avoid potential package conflicts
 	   #:collect    ;       with cl-utilities and such.
+	   #:ncollect
 	   #:with-collectors
 	   #:compose
 	   
@@ -300,19 +301,44 @@ by COLLECTING, then return that argument."
 			    (setf ,tail (list thing)))
 		      (setf ,collector
 			    (setf ,tail (list thing))))
-		  thing))
+		  thing)
+		(ncollect (list)
+		  (if ,collector
+		      (setf (cdr ,tail) list)
+		      (setf ,collector list))
+		  (if list
+		      (setf ,tail (last list)))
+		  nil))
 	 ,@body)
        ,collector)))
 
-;; This should only be called inside of COLLECTING macros, but we
-;; define it here to provide an informative error message and to make
+;; These should only be called inside of COLLECTING macros, but we
+;; define them here to provide informative error messages and to make
 ;; it easier for SLIME (et al.) to get documentation for the COLLECT
-;; function when it's used in the COLLECTING macro.
+;; and NCOLLECT functions when they're used in the COLLECTING macro.
 (defun collect (thing)
   "Collect THING in the context established by the COLLECTING macro.
 Return THING."
   (error "Can't collect ~S outside the context of the COLLECTING macro"
 	 thing))
+
+(defun ncollect (list)
+  "Destructively collect LIST in the context established by the
+COLLECTING macro as if by NCONC. Return NIL. This is equivalent
+to (mapc #'collect list) except faster (because no consing) and LIST
+must be prepared to have its tail destructively modified the next time
+COLLECT or NCOLLECT is called.
+
+Calling this function NCOLLECT has at least two advantages:
+1. The N prefix reminds you that you must pass a fresh list
+that isn't referenced anywhere else because of the destructive behavior
+\(its tail will be modified the next time COLLECT or NCOLLECT is called).
+2. NCOllect starts the same as NCOnc.
+Other candidates would have been COLLECT-LIST (a bit long)
+and NCONCING (potential conflict with ITERATE)."
+  (error "Can't ncollect ~S outside the context of the COLLECTING macro"
+	 list))
+
 
 (flet ((check-collectors (collectors)
 	 "Check that all of the COLLECTORS are symbols. If not, raise an error."
