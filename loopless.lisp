@@ -291,24 +291,26 @@ Example:
 (defmacro collecting (&body body)
   "Collect things into a list forwards. Within the body of this macro,
 the COLLECT function will collect its argument into the list returned
-by COLLECTING."
+by COLLECTING, then return that argument."
   (with-unique-names (collector tail)
     `(let (,collector ,tail)
-      (labels ((collect (thing)
-		 (if ,collector
-		     (setf (cdr ,tail)
-			   (setf ,tail (list thing)))
-		     (setf ,collector
-			   (setf ,tail (list thing))))))
-	,@body)
-      ,collector)))
+       (labels ((collect (thing)
+		  (if ,collector
+		      (setf (cdr ,tail)
+			    (setf ,tail (list thing)))
+		      (setf ,collector
+			    (setf ,tail (list thing))))
+		  thing))
+	 ,@body)
+       ,collector)))
 
 ;; This should only be called inside of COLLECTING macros, but we
 ;; define it here to provide an informative error message and to make
 ;; it easier for SLIME (et al.) to get documentation for the COLLECT
 ;; function when it's used in the COLLECTING macro.
 (defun collect (thing)
-  "Collect THING in the context established by the COLLECTING macro"
+  "Collect THING in the context established by the COLLECTING macro.
+Return THING."
   (error "Can't collect ~S outside the context of the COLLECTING macro"
 	 thing))
 
