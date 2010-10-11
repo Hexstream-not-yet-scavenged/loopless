@@ -14,6 +14,15 @@
 	   #:mappl
 	   #:mapplist
 	   #:mappcon
+	   #:mapv
+	   #:mapvector
+	   #:mapvcon
+	   #:mapt
+	   #:maptimes
+	   #:maptcon
+	   #:mapt*
+	   #:maptimes*
+	   #:maptcon*
 
 	   #:for*
 	   #:step*
@@ -109,19 +118,26 @@ destructuring patterns as in DESTRUCTURING-BIND."
 
 
 ;;; The following functions are analogous to MAPC/MAPCAR/MAPCAN
-;;; and MAPL/MAPLIST/MAPCON, but for alists and plists.
+;;; and MAPL/MAPLIST/MAPCON, but for alists, plists and vectors.
+;;;
+;;; Also, with slightly different semantics,
+;;; the MAPT* family of functions for mapping over integers.
 ;;;
 ;;; ┌───┬────────────────────────────┬────────┬───────────┬──────────┐
-;;; │PKG│         Result acc. method │ nil    │ list      │ nconc    │
+;;; │PKG│ Result accumulation method │ nil    │ list      │ nconc    │
 ;;; ├───┼────────────────────────────┼────────┼───────────┼──────────┤
-;;; │   │      Structure mapped over │        │           │          │
-;;; │   │                            │        │           │          │
+;;; │   │         Values mapped over │        │           │          │
+;;; │   ├----------------------------┤        │           │          │
 ;;; │CL │         elements of a list │ MAPC   │ MAPCAR    │ MAPCAN   │
 ;;; │CL │           conses of a list │ MAPL   │ MAPLIST   │ MAPCON   │
 ;;; │   │                            │        │           │          │
 ;;; │LL │ (key . value)s of an alist │ MAPAL  │ MAPALIST  │ MAPACON  │
 ;;; │LL │   (key value)s of an alist │ MAPAL* │ MAPALIST* │ MAPACON* │
 ;;; │LL │    (key value)s of a plist │ MAPPL  │ MAPPLIST  │ MAPPCON  │
+;;; │LL │       elements of a vector │ MAPV   │ MAPVECTOR │ MAPVCON  │
+;;; │   │                            │        │           │          │
+;;; │LL │  integers from 0 below max │ MAPT   │ MAPTIMES  │ MAPTCON  │
+;;; │LL │  As above, but no iter var │ MAPT*  │ MAPTIMES* │ MAPTCON* │
 ;;; └───┴────────────────────────────┴────────┴───────────┴──────────┘
 ;;;
 ;;; Note that the names of the new functions
@@ -154,59 +170,143 @@ list composed of each value returned by FUNCTION."
 arguments for each alist entry: the key and value. MAPACON returns a
 list composed of the concatenation of each list returned by FUNCTION."
   (if more-alists
-      (error "mapacan only supports one alist argument for now."))
+      (error "mapacon only supports one alist argument for now."))
   (loop for (key . value) in alist
 	nconc (funcall function key value)))
 
 (defun mapal* (function alist &rest more-alists)
-  "Just like MAPAL except the value is in the second element of each
-entry, not the cdr."
+  "Just like MAPAL except the value is in the second element
+of each entry, not the cdr."
   (if more-alists
       (error "mapal* only supports one alist argument for now."))
   (loop for (key value) in alist
 	do (funcall function key value)))
 
 (defun mapalist* (function alist &rest more-alists)
-  "Just like MAPALIST except the value is in the second element of each
-entry, not the cdr."
+  "Just like MAPALIST except the value is in the second element
+of each entry, not the cdr."
   (if more-alists
       (error "mapalist only supports one alist argument for now."))
   (loop for (key value) in alist
 	collect (funcall function key value)))
 
 (defun mapacon* (function alist &rest more-alists)
-  "Just like MAPACON except the value is in the second element of each
-entry, not the cdr."
+  "Just like MAPACON except the value is in the second element
+of each entry, not the cdr."
   (if more-alists
       (error "mapacon only supports one alist argument for now."))
   (loop for (key value) in alist
 	nconc (funcall function key value)))
 
-(defun mappl (function list &rest more-lists)
+(defun mappl (function plist &rest more-plists)
   "Analogous to MAPL but for plists. The FUNCTION is passed two
 arguments for each plist entry: the key and value. MAPPL returns nil."
-  (if more-lists
-      (error "mappl only supports one list argument for now."))
-  (loop for (key value) on list by #'cddr
+  (if more-plists
+      (error "mappl only supports one plist argument for now."))
+  (loop for (key value) on plist by #'cddr
 	do (funcall function key value)))
 
-(defun mapplist (function list &rest more-lists)
+(defun mapplist (function plist &rest more-plists)
   "Analogous to MAPLIST but for plists. The FUNCTION is passed two
 arguments for each plist entry: the key and value. MAPPLIST returns a
 list composed of each value returned by FUNCTION."
-  (if more-lists
+  (if more-plists
       (error "mapplist only supports one list argument for now."))
-  (loop for (key value) on list by #'cddr
+  (loop for (key value) on plist by #'cddr
 	collect (funcall function key value)))
 
 (defun mappcon (function list &rest more-lists)
   "Analogous to MAPCON but for plists. The FUNCTION is passed two
-arguments for each plist entry: the key and value. MAPACON returns a
+arguments for each plist entry: the key and value. MAPPCON returns a
 list composed of the concatenation of each list returned by FUNCTION."
   (if more-lists
       (error "mappcon only supports one list argument for now."))
   (loop for (key value) on list by #'cddr
 	nconc (funcall function key value)))
+
+(defun mapv (function vector &rest more-vectors)
+  "Analogous to MAPL but for vectors. The FUNCTION is passed each
+element of the vector in turn. MAPV returns nil."
+  (let ((vectors (cons vector more-vectors)))
+    (dotimes (i (apply #'max
+		       (mapcar #'length vectors)))
+      (apply function (mapcar (lambda (vector)
+				(aref vector i))
+			      vectors)))))
+
+(defun mapvector (function vector &rest more-vectors)
+  "Analogous to MAPLIST but for vectors. The FUNCTION is passed each
+element of the vector in turn. MAPVECTOR returns a list composed of
+each value returned by FUNCTION."
+  (collecting
+    (let ((vectors (cons vector more-vectors)))
+      (dotimes (i (apply #'max
+			 (mapcar #'length vectors)))
+	(collect (apply function (mapcar (lambda (vector)
+					   (aref vector i))
+					 vectors)))))))
+
+(defun mapvcon (function vector &rest more-vectors)
+  "Analogous to MAPCON but for vectors. The FUNCTION is passed each
+element of the vector in turn. MAPVCON returns a list composed of the
+concatenation of each list returned by FUNCTION."
+  (collecting
+    (let ((vectors (cons vector more-vectors)))
+      (dotimes (i (apply #'max
+			 (mapcar #'length vectors)))
+	(ncollect (apply function (mapcar (lambda (vector)
+					    (aref vector i))
+					  vectors)))))))
+
+(defun mapt (function count)
+  "Call function COUNT times, passing 0 the first time
+and then incrementing by 1 for each successive call.
+Return NIL."
+  (let ((function (coerce function 'function)))
+    (dotimes (i count)
+      (funcall function i))))
+
+(defun maptimes (function count)
+  "Call function COUNT times, passing 0 the first time
+and then incrementing by 1 for each successive call.
+MAPTIMES returns a list composed of each value returned by FUNCTION."
+  (collecting
+    (let ((function (coerce function 'function)))
+      (dotimes (i count)
+	(collect (funcall function i))))))
+
+(defun maptcon (function count)
+  "Call function COUNT times, passing 0 the first time
+and then incrementing by 1 for each successive call.
+MAPTCON returns a list composed of the
+concatenation of each list returned by FUNCTION."
+  (collecting
+    (let ((function (coerce function 'function)))
+      (dotimes (i count)
+	(ncollect (funcall function i))))))
+
+(defun mapt* (function count)
+  "Just like MAPT except no argument is passed to FUNCTION.
+More convenient than having to name the argument and then ignore it."
+  (let ((function (coerce function 'function)))
+    (dotimes* (count)
+      (funcall function))))
+
+(defun maptimes* (function count)
+  "Just like MAPTIMES except no argument is passed to FUNCTION.
+More convenient than having to name the argument and then ignore it."
+  (collecting
+    (let ((function (coerce function 'function)))
+      (dotimes* (count)
+	(collect (funcall function))))))
+
+(defun maptcon* (function count)
+  "Just like MAPTCON except no argument is passed to FUNCTION.
+More convenient than having to name the argument and then ignore it."
+  (collecting
+    (let ((function (coerce function 'function)))
+      (dotimes* (count)
+	(ncollect (funcall function))))))
 
 
 (defmacro for* (bindings &body body)
@@ -332,7 +432,7 @@ COLLECT or NCOLLECT is called.
 
 Calling this function NCOLLECT has at least two advantages:
 1. The N prefix reminds you that you must pass a fresh list
-that isn't referenced anywhere else because of the destructive behavior
+that isn't referenced anywhere else because of the destructive behavior;
 \(its tail will be modified the next time COLLECT or NCOLLECT is called).
 2. NCOllect starts the same as NCOnc.
 Other candidates would have been COLLECT-LIST (a bit long)
