@@ -309,6 +309,7 @@ by COLLECTING, then return that argument."
 		  (if list
 		      (setf ,tail (last list)))
 		  nil))
+	 (declare (ignorable #'collect #'ncollect))
 	 ,@body)
        ,collector)))
 
@@ -372,7 +373,7 @@ they were given."
 						       (setf ,tail (list thing)))
 						 (setf ,collector
 						       (setf ,tail (list thing))))
-					     THING)
+					     thing)
 			collect `(,(intern (format nil "N~A" collector))
 					   (list)
 					   (if ,collector
@@ -381,6 +382,10 @@ they were given."
 					   (if list
 					       (setf ,tail (last list)))
 					   nil))
+	   (declare (ignorable
+		     ,@(loop for collector in collectors
+			     collect `#',collector
+			     collect `#',(intern (format nil "N~A" collector)))))
 	   ,@body)
 	 (values ,@collectors)))))
 
