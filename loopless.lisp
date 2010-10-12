@@ -26,18 +26,29 @@
 
 	   #:for*
 	   #:step*
-	   #:collecting ; Todo: avoid potential package conflicts
-	   #:collect    ;       with cl-utilities and such.
-	   #:ncollect
-	   #:with-collectors
-	   #:compose
+	   ; collecting, collect, ncollect, with-collectors, compose
 	   
 	   #:doalist
 	   #:doalist*
 	   #:doplist
 	   #:dovector
 	   #:dotimes*
-	   #:while*))
+	   #:while*)
+  ;; The following symbols are likely to conflict with "base
+  ;; utilities" packages such as cl-utilities. If you intend to use
+  ;; both LOOPless and one such library that exports these symbols
+  ;; from within the same package but without having to explicitly
+  ;; deal with the conflicts (symbol shadowing), then use (pushnew
+  ;; :loopless-noconflict *features*) prior to loading LOOPless.
+  ;; Then these symbols won't be exported.
+  ;;
+  ;; It's still possible to use these symbols by prefixing them with "ll:".
+  #-loopless-noconflict
+  (:export #:collecting
+	   #:collect
+	   #:ncollect
+	   #:with-collectors
+	   #:compose))
 
 (in-package #:loopless)
 
