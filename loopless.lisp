@@ -514,7 +514,8 @@ they were given."
   "Analogous to DOLIST, but for alists.
 Throws an error if one of the items in the list is not a list (cons or
 nil). If an entry is NIL, then both key and value will be NIL (or
-should this throw an error?)."
+should this throw an error?).
+Establishes a block named NIL."
   (with-unique-names (assoc)
     `(dolist (,assoc ,alist ,result)
       (let ((,key (car ,assoc))
@@ -531,13 +532,15 @@ entry, not the cdr."
 	 ,@body))))
 
 (defmacro doplist ((key value plist &optional result) &body body)
-  "Analogous to DOLIST, but for plists."
+  "Analogous to DOLIST, but for plists.
+Establishes a block named NIL."
   `(loop for (,key ,value) on ,plist by #'cddr
 	 do (progn ,@body)
 	 finally (return ,result)))
 
 (defmacro dovector ((var vector &optional result) &body body)
-  "Analogous to DOLIST, but for vectors."
+  "Analogous to DOLIST, but for vectors.
+Establishes a block named NIL."
   `(loop for ,var across ,vector
 	 do (progn ,@body)
 	 ,@(if result
@@ -548,7 +551,8 @@ entry, not the cdr."
   "Just like DOTIMES, but without a var argument.
 This saves you from having to name the variable and makes explicit the
 fact you won't need its value. Of marginal value, but offers a nice
-alternative to (loop repeat count do body finally result)."
+alternative to (loop repeat count do body finally result).
+Establishes a block named NIL."
   (with-unique-names (ignored-var)
     `(dotimes (,ignored-var ,count ,@(if result (list result)))
        ,@body)))
@@ -556,5 +560,6 @@ alternative to (loop repeat count do body finally result)."
 (defmacro while* (test &body body)
   "TEST is evaluated. If the result is true, then BODY is executed as
 an implicit PROGN, else the loop terminates. This cycle repeats as
-long as TEST evaluates to true."
+long as TEST evaluates to true.
+Establishes a block named NIL."
   `(loop while ,test do (progn ,@body)))
