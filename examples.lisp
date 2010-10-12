@@ -66,8 +66,14 @@
 
 ;; Once you know MAPL/MAPLIST/MAPCON,
 ;;      learning MAPAL/MAPALIST/MAPACON,
-;;               MAPAL*/MAPALIST*/MAPACON* and
-;;               MAPPL/MAPPLIST/MAPPCON is trivial.
+;;               MAPAL*/MAPALIST*/MAPACON*,
+;;               MAPPL/MAPPLIST/MAPPCON,
+;;               MAPV/MAPVECTOR/MAPVCON,
+;;               MAPT/MAPTIMES/MAPTCON and
+;;               MAPT*/MAPTIMES*/MAPTCON* is trivial.
+;;
+;; There is a nice clean summary table of these functions
+;; in loopless.lisp, right before the definition of MAPAL.
 
 
 ;;;; -- Using MAPCAN when you need to both collect and nconc ---------
