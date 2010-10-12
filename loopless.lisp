@@ -238,24 +238,13 @@ list composed of the concatenation of each list returned by FUNCTION."
 (defun mapv (function vector &rest more-vectors)
   "Analogous to MAPL but for vectors. The FUNCTION is passed each
 element of the vector in turn. MAPV returns nil."
-  (let ((vectors (cons vector more-vectors)))
-    (dotimes (i (apply #'max
-		       (mapcar #'length vectors)))
-      (apply function (mapcar (lambda (vector)
-				(aref vector i))
-			      vectors)))))
+  (apply #'map nil function vector more-vectors))
 
 (defun mapvector (function vector &rest more-vectors)
   "Analogous to MAPLIST but for vectors. The FUNCTION is passed each
 element of the vector in turn. MAPVECTOR returns a list composed of
 each value returned by FUNCTION."
-  (collecting
-    (let ((vectors (cons vector more-vectors)))
-      (dotimes (i (apply #'max
-			 (mapcar #'length vectors)))
-	(collect (apply function (mapcar (lambda (vector)
-					   (aref vector i))
-					 vectors)))))))
+  (apply #'map 'list function vector more-vectors))
 
 (defun mapvcon (function vector &rest more-vectors)
   "Analogous to MAPCON but for vectors. The FUNCTION is passed each
