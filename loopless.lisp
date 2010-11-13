@@ -36,10 +36,10 @@
 	   #:while*)
   ;; The following symbols are likely to conflict with "base
   ;; utilities" packages such as cl-utilities. If you intend to use
-  ;; both LOOPless and one such library that exports these symbols
+  ;; both Loopless and one such library that exports these symbols
   ;; from within the same package but without having to explicitly
   ;; deal with the conflicts (symbol shadowing), then use (pushnew
-  ;; :loopless-noconflict *features*) prior to loading LOOPless.
+  ;; :loopless-noconflict *features*) prior to loading Loopless.
   ;; Then these symbols won't be exported.
   ;;
   ;; It's still possible to use these symbols by prefixing them with "ll:".
@@ -53,7 +53,7 @@
 (in-package #:loopless)
 
 ;;;; So, I'm sure some will note the "irony" of using LOOP in the
-;;;; implementation of a library called LOOPless which sole reason for
+;;;; implementation of a library called Loopless which sole reason for
 ;;;; existing is using LOOP less, so I thought I'd address this: the
 ;;;; reason I'm using LOOP at some places here is that it makes the
 ;;;; implementation that much simpler and I'm also guessing that much

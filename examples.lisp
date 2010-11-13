@@ -5,8 +5,8 @@
 ;;;; The examples are roughly in increasing order of complexity.
 
 ;;;; To make the distinction between what Common Lisp already provides
-;;;; and what is part of LOOPless easy, I will prefix symbols that are
-;;;; part of the latter with LL, the package nickname of LOOPless.
+;;;; and what is part of Loopless easy, I will prefix symbols that are
+;;;; part of the latter with LL, the package nickname of Loopless.
 
 
 ;;;; -- Reading forms from a stream with WHILE* ----------------------
@@ -96,7 +96,7 @@
 	    (list (copy-seq element))))
 	'(a 24 x y 86 "test" (nested stuff)))
 
-;; Here I'm not actually using anything new provided by LOOPless.
+;; Here I'm not actually using anything new provided by Loopless.
 ;; Sometimes the standard already provides suitable alternatives to LOOP.
 
 
@@ -127,7 +127,7 @@
 ;; because we don't have to conform to LOOP syntax.
 
 ;; It's true that ITERATE doesn't have that problem,
-;; but with LOOPless you'll need a LOOP-like construct
+;; but with Loopless you'll need a LOOP-like construct
 ;; so rarely that LOOP's quirks are less of a problem.
 ;; Conversely, ITERATE's marginal advantages
 ;; over LOOP are less compelling.
