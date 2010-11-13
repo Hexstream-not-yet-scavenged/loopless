@@ -515,12 +515,13 @@ they were given."
 Throws an error if one of the items in the list is not a list (cons or
 nil). If an entry is NIL, then both key and value will be NIL (or
 should this throw an error?).
-Establishes a block named NIL."
+Establishes a block named NIL.
+The body of the loop is an implicit TAGBODY."
   (with-unique-names (assoc)
     `(dolist (,assoc ,alist ,result)
       (let ((,key (car ,assoc))
 	    (,value (cdr ,assoc)))
-	,@body))))
+	(tagbody ,@body)))))
 
 (defmacro doalist* ((key value alist &optional result) &body body)
   "Just like DOALIST except the value is in the second element of each
@@ -529,11 +530,12 @@ entry, not the cdr."
     `(dolist (,assoc ,alist ,result)
        (let ((,key (first ,assoc))
 	     (,value (second ,assoc)))
-	 ,@body))))
+	 (tagbody ,@body)))))
 
 (defmacro doplist ((key value plist &optional result) &body body)
   "Analogous to DOLIST, but for plists.
-Establishes a block named NIL."
+Establishes a block named NIL.
+The body of the loop is an implicit TAGBODY."
   `(loop for (,key ,value) on ,plist by #'cddr
 	 do (progn ,@body)
 	 finally (return ,result)))
@@ -552,7 +554,8 @@ Establishes a block named NIL."
 This saves you from having to name the variable and makes explicit the
 fact you won't need its value. Of marginal value, but offers a nice
 alternative to (loop repeat count do body finally result).
-Establishes a block named NIL."
+Establishes a block named NIL.
+The body of the loop is an implicit TAGBODY."
   (with-unique-names (ignored-var)
     `(dotimes (,ignored-var ,count ,@(if result (list result)))
        ,@body)))
@@ -561,5 +564,11 @@ Establishes a block named NIL."
   "TEST is evaluated. If the result is true, then BODY is executed as
 an implicit PROGN, else the loop terminates. This cycle repeats as
 long as TEST evaluates to true.
-Establishes a block named NIL."
-  `(loop while ,test do (progn ,@body)))
+Establishes a block named NIL.
+The body of the loop is an implicit TAGBODY."
+  `(prog ()
+    loop-start
+      (if (not ,test)
+	  (return))
+      (tagbody ,@body)
+      (go loop-start)))
