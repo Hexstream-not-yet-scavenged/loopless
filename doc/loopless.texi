@@ -1,0 +1,1766 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@setfilename loopless.info
+@settitle Loopless Manual
+@allowcodebreaks false
+@syncodeindex fn cp
+@c %**end of header
+
+@copying
+This manual documents Loopless, which contains utilities that provide
+a compelling alternative to LOOP for the vast majority of its
+use-cases.  Most of these utilities are straightforward to learn and
+use, and are consistent in style with other standard Common Lisp
+constructs.  All of them are easily composable with the rest of the
+language, unlike LOOP's monolithic approach.
+
+@noindent The project's home is @uref{http://www.loopless.org}.
+
+@noindent Originally authored by Jean-Philippe Paradis <hexstream@@gmail.com>.
+
+@noindent This project is in the public domain.
+@* See the Unlicense appendix for details.
+@end copying
+
+@c Title page should go here,
+@c but I support only Info and HTML output at this time.
+
+@ifnottex
+@node Top
+@top Loopless Manual
+
+@insertcopying
+
+@menu
+* Introduction:: This will give you a good idea of what Loopless is and why it exists.
+* LOOP --> Loopless:: Several examples of @code{loop} --> Loopless conversion.
+* Reference::    This comprehensively documents all utilities provided by Loopless.
+
+* Unlicense::      Loopless and its manual are in the public domain.
+* Avoiding Conflicts:: Loopless exports a few symbols which may cause conflicts.
+* Star Suffix::  Several Loopless utilities have @samp{*} as a suffix.  Here's why.
+
+* Index::        An entry for each Concept, Function and Macro.
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Introduction
+
+* Loopless over LOOP:: What's wrong with @code{loop}?
+                       How can Loopless help you avoid its usage or reject it outright?
+* Utilities::          An overview of the utilities provided by Loopless.
+* Getting Started::    How to load Loopless.
+
+Converting from @code{loop} to Loopless style
+
+* Alists and Plists: Alist and Plist Examples. How to process alists (both types) and plists elegantly and uniformly.
+* COLLECTING/WITH-COLLECTORS: COLLECTING/WITH-COLLECTORS Examples. Easy and efficient accumulation of values into one or multiple lists.
+* FOR* Examples::               @code{for*} lets you use @code{loop}'s
+                                ``for-as-arithmetic'' and ``for-as-equals'' anywhere.
+* Trivial Operators: Trivial Operators Examples. Examples for @code{while*}, @code{dovector}, and other intuitive operators.
+* Advanced Examples::           Combining several Loopless utilities to tackle more complex scenarios.
+
+Loopless Reference
+
+* Quick Reference::       A table with a tiny description of each symbol exported by Loopless.
+* MAPCAR-like Functions:: Mapping functions following the lead of @code{mapcar} and friends.
+* DOLIST-like Macros::    Iteration macros following the lead of @code{dolist} and friends.
+* Collection Macros::     Easy and efficient collection of values into one (or multiple) list(s).
+* FOR*::                  Use a subset of @code{loop}'s @code{for} clause to step variables
+                          in conjunction with any looping construct whatsoever.
+* WHILE*::                Execute an implicit @code{tagbody} repeatedly while a condition holds true.
+* COMPOSE::               Takes a list of functions and returns a function that will
+                          pass its argument ``through'' those functions when called.
+
+@code{mapcar}-like Functions
+
+* Overview: MAPCAR-like Overview. There's an handy summary table of @code{mapcar}-like functions here.
+* MAPALIST[*] and friends::       Map over alists, whether ``cdr-valued'' or ``cadr-valued''.
+* MAPPLIST and friends::          Map over plists.
+* MAPVECTOR and friends::         Map over vectors.
+* MAPTIMES[*] and friends::       Map over integers, with or without an iteration argument.
+
+@code{dolist}-like Macros
+
+* Overview: DOLIST-like Overview. There's an handy summary table of @code{dolist}-like macros here.
+* DOCONS::              Iterate over the conses of a list.
+* DOALIST[*]::          Iterate over an alist, whether ``cdr-valued'' or ``cadr-valued''.
+* DOPLIST::             Iterate over a plist.
+* DOVECTOR::            Iterate over a vector.
+* DOTIMES*::            Same as @code{dotimes} but without an iteration variable.
+
+Collection Macros
+
+* COLLECTING::      Collect values into a list efficiently, then return that list.
+* WITH-COLLECTORS:: Collect values into multiple lists efficiently,
+                    then return those lists as multiple values.
+
+@end detailmenu
+@end menu
+
+@end ifnottex
+
+@node Introduction
+@chapter Introduction
+
+@menu
+* Loopless over LOOP:: What's wrong with @code{loop}?
+                       How can Loopless help you avoid its usage or reject it outright?
+* Utilities::          An overview of the utilities provided by Loopless.
+* Getting Started::    How to load Loopless.
+@end menu
+
+@node Loopless over LOOP
+@section @code{loop} Problems, Loopless Solutions
+
+@code{loop} suffers from several inherent problems that make of it a
+totally inappropriate construct that should never even have existed.
+Any attempt at redesigning @code{loop} to fix the flaws at the core of
+its design would destroy its very essence, therefore the whole concept
+must be scrapped. (This bold stance is justified below.)
+
+Unfortunately, Common Lisp doesn't provide appropriate alternatives to
+@code{loop} for many of its common usage scenarios.  @strong{Loopless
+provides utilities that fill the small but significant looping-related
+gaps in the language, eliminating any @emph{perceived} need for
+@code{loop}.}
+
+Loopless provides highly intuitive and conservative extensions to
+Common Lisp, such as @code{mapcar}-like functions for processing of
+alists and plists (among other structures).  Taken individually, each
+such utility may not look like much, but together they remove most of
+the guesswork out of converting (mentally or textually) a @code{loop}
+to another looping construct by providing an unambiguously best
+alternative in most cases (or deferring to Common Lisp if it already
+has a suitable solution).
+
+In the rest of this section, I will expose some of the problems which
+afflict @code{loop} to its very core (I'm not the first to do this)
+and then explain why they matter and how Loopless eliminates
+@emph{all} of them.
+
+-- [Sloppy start] --
+
+(Some of the rest of this section, until ``Sloppy end'', is not as
+clear as it could be, I rushed it out to meet my arbitrary
+self-imposed deadline of December 1st for version 1.0. My apologies.)
+
+LOOP's full generality is seldom needed and using simpler, more
+focussed constructs when appropriate results in less conceptual
+complexity, in my opinion. I believe that using LOOP less results in
+appreciating the rest of the language more.
+
+Because of its monolithic nature and its tons of features and
+resulting high conceptual complexity, it's really hard to learn
+@code{loop} and all its intricacies. You have to learn a bunch of
+@code{loop}-specific syntax and semantics before you can even get
+started using it. All this knowledge doesn't leverage widespread
+approaches found in the rest of Common Lisp, in fact it needlessly
+competes with them in many cases. @strong{In contrast}, because of its
+similarity with the rest of what the standard already provides,
+Loopless builds on and reinforces standard Common Lisp
+approaches. Loopless is also very small compared to @code{loop}.
+
+The simplicity of Loopless is something that beginners and masters
+alike can appreciate.
+
+I complain a lot about how @code{loop} is ``too powerful'' for its own
+sake, however, even some of the more complex scenarios which
+@code{loop} seems especially well-suited for can be implemented
+conveniently without it.
+
+@code{loop} is oftentimes totally overkill for the situation at
+hand. You often end up reusing the same idioms over and over again.
+
+@code{loop} is monolithic. This really is the central issue and a
+source or enabler of most of its problems. There is no other construct
+in Common Lisp that has even a passible resemblance to it (except
+maybe @code{format}?), thus it often feels, to me at least, out of
+place.
+
+One of the greatest strengths of Common Lisp is the ability to create
+domain-specific languages, and @code{loop} is often cited as an
+example of that capability. While I'm a huge fan of DSLs (it's my
+favorite secret weapon in programming), I think @code{loop} is the
+perfect example of what can go wrong with this approach if one is not
+careful.
+
+To make matters worse, due to its ``all-encompassing'' nature,
+@code{loop} often provides solutions redundant with other simpler,
+more focussed constructs in the rest of the language. Take the example
+of @code{mapcar}. You might start with code like this (let's assume
+the list is dynamically constructed somewhere else):
+
+@lisp
+(mapcar (lambda (element)
+          (list element element))
+        '(a b c))
+@result{} ((A A) (B B) (C C))
+@end lisp
+
+So far, so good. But now, let's say you want to add a number at the
+start of the list, based on the position of the element in the
+list. You could just stick with @code{mapcar} and write some manual
+binding and stepping, like this:
+
+@lisp
+(mapcar (let ((i 0))
+	  (lambda (element)
+	    (prog1 (list i element element)
+	      (incf i))))
+        '(a b c))
+@result{} ((0 A A) (1 B B) (2 C C))
+@end lisp
+
+That isn't too bad, but if you try pushing this approach to more
+complex scenarios, you'll find that it's really inconvenient,
+stylistically questionable and error-prone in the general case.
+
+You might decide that you really like @code{loop}'s
+``for-as-arithmetic'' stepping after all, so whenever you find that
+you need arithmetic stepping, you rewrite whatever looping construct
+you were using into a @code{loop}.
+
+However, it's really annoying to rewrite a whole piece of code into
+another style (@code{loop}) just to gain @emph{one} feature
+(``for-as-arithmetic''). To avoid that problem, you might eventually
+just use @code{loop} all the time, and then you end up with code
+similar to this everywhere:
+
+@lisp
+(loop for element in '(a b c)
+      collect (list element element))
+@end lisp
+
+What's the point of using a ridiculously ``powerful'' construct if you
+then use it for simplistic scenarios where another operator was built
+into Common Lisp just for this purpose??
+
+Loopless provides @code{for*}, which lets you use
+``for-as-arithmetic'' and ``for as equals'' in conjunction with any
+looping construct whatsoever. The above example with the manual
+@code{incf} would simply be rewritten like this (don't worry about the
+``mysterious'' @code{step*}, @code{for*} is the only unconservative
+Loopless utility, and then it's not very complicated either):
+
+@lisp
+(mapcar (for* ((i from 0))
+          (lambda (element)
+            (step*)
+            (list i element element)))
+        '(a b c))
+@result{} ((0 A A) (1 B B) (2 C C))
+@end lisp
+
+That's really a recurring pattern with @code{loop}. It's so
+``all-encompassing'' that many of its potential uses are redundant
+with other operators (or combination of operators) that Common Lisp
+provides. You have two ``worlds'' with few interactions between them:
+@code{loop}, and the rest of Common Lisp.
+
+One of @code{loop}'s problems is that it's not extensible. Some
+alternatives to @code{loop} which share its core design, such as
+@code{iterate}, do provide for extensibility. While all else being
+equal, I'd rather have extensibility available rather than not, the
+issue here is that the only thing that makes one wish @code{loop} was
+extensible is that it's monolithic in the first place! Loopless proves
+that there is no need for such a construct.
+
+But, clearly, it's better to have a set of small, simple, focussed
+utilities that you can mix and match with the rest of the language, as
+exemplified by almost every Common Lisp operator save for @code{loop}
+and perhaps a few others (@code{do}?) than an extensible walled-garden
+of a monolithic construct.
+
+Similar operations should look similar.
+
+
+@code{loop} doesn't have enough parentheses. This causes no end of
+formatting problems, among other things. For many years, @code{loop}
+just wouldn't format properly in Slime, and when it did, it would
+invariably soon get broken by an update. Relatively recently, most of
+the problems seem to @emph{finally} have been fixed, but the simple
+fact that it took so much time and effort to get it right is a
+testament to the peculiarity and shall I say, inappropriateness of
+@code{loop}'s syntax when compared with the rest of Common Lisp. I was
+still stumbling upon some mysterious @code{loop} formatting problems
+from time to time when I stopped using it.
+
+-- [Sloppy end] --
+
+By the way, I do realize and acknowledge that because of history,
+inertia and apathy, @code{loop} will continue to remain in widespread
+use for the foreseeable future, but I hope someday its fate will be
+similar to COBOL's: still in use in legacy codebases but no longer
+used in new projects (literally or for all practical purposes). There
+has been much whining and dissenting about @code{loop}, and I hope
+things can move forward now that there's a really incredibly simple
+and practical, viable alternative to @code{loop}.
+
+Given the fact Loopless just reuses concepts already introduced by
+Common Lisp and therefore integrates seemlessly with it, I'm hoping
+some of its utilities will someday be incorporated into whatever
+standard gets created after Common Lisp, and then why not deprecate
+@code{loop}! To this end, I release this whole library in the public
+domain to promote maximum possible adoption. If you don't want to
+adopt Loopless wholesale, you can import any subset you deem useful
+into your own libraries without licensing problems. Another reason to
+release this into the public domain is I felt nobody should ``own''
+such low-innovation utilities, what with the wholesale copying of
+@code{mapcar} and @code{dolist} and all@enddots{}
+
+For what it's worth, I use Loopless in virtually all my libraries, and
+thanks to it I easily got rid of @code{loop} almost completely in all
+my codebases, painlessly. In my experience, it's possible to convert
+big batches of @code{loop}s to Loopless style without even having to
+understand the surrounding code. It's an almost mechanical syntax
+translation process. I still have a few legacy instances of
+@code{loop} here and there in stale code but they'll get converted
+whenever I revisit/update that code.
+
+I never stumbled on a @code{loop} I couldn't rewrite in a better or at
+least as good way with Common Lisp plus Loopless. I'm sure it wouldn't
+be so hard to deliberately construct a contrived, highly unrealistic
+example of a @code{loop} that couldn't satisfactorily be rewritten
+Loopless style, but that would be missing the point. However, if you
+do stumble upon a @code{loop} instance you believe Common Lisp +
+Loopless can't handle well, please do let me know via the mailing list
+or my personal email address! I'll see if I can figure out how to
+rewrite it or if Loopless really has a blind spot in need of
+attention.
+
+Lastly, I'll mention Loopless is comprehensively documented!
+
+(The source code itself is deliberately sparsely documented so as to
+avoid clutter and a resulting drop in my productivity.  Moreover,
+having separate documentation like this allows for a much more
+thorough treatment.)
+
+
+@node Utilities
+@section Overview of Loopless Utilities
+
+Here's descriptions of all the (informal) categories of operators
+provided by Loopless. @xref{Reference}, for comprehensive
+documentation of all these utilities. @xref{Quick Reference}, for a
+table showing at a glance all the operators.
+
+@table @asis
+@item @code{mapcar}-like Functions
+These are mapping functions following the lead of @code{mapcar} and
+friends.  They are analogous to @code{mapc/mapcar/mapcan} and
+@code{mapl/maplist/mapcon} for iteration (and possible accumulation of
+values into a list) over alists, plists, vectors and integers.
+@xref{MAPCAR-like Functions}.
+
+@item @code{dolist}-like Macros
+These are iteration macros following the lead of @code{dolist} and
+friends.  They are analogous to @code{dolist} and @code{dotimes}, but
+for the conses of a list, alists, plists and vectors.  There's also
+@code{dotimes*}, which is just like @code{dotimes} but without an
+iteration variable.  @xref{DOLIST-like Macros}.
+
+@item Collection Macros
+These macros, @code{collecting} and @code{with-collectors}, provide
+easy and efficient collection of values into one (or multiple)
+list(s).  They were copied from the @code{cl-utilities} library but I
+added support for @code{nconc}-style accumulation.  @xref{Collection
+Macros}.
+
+@item @code{for*}
+This macro lets you use a subset of @code{loop}'s @code{for} clause to
+step variables in conjunction with any looping construct whatsoever.
+``for-as-arithmetic'' and ``for-as-equals'' are supported.  @xref{FOR*}.
+
+@item @code{while*}
+This macro executes an implicit @code{tagbody} repeatedly while a
+condition holds true.  @xref{WHILE*}.
+
+@item @code{compose}
+This function takes a list of functions and returns a function that
+will pass its argument ``through'' those functions when called.  It was
+copied from the @code{cl-utilities} library and is included in
+Loopless because it's very useful for the @code{mapcar}-like
+functions, in particular.  @xref{COMPOSE}.
+@end table
+
+
+@node Getting Started
+@section Loading Loopless
+
+Loopless has no dependencies.
+@* The code proper is contained in one file: @file{loopless.lisp}.
+
+@noindent First, load Loopless with ASDF:
+
+@lisp
+(asdf:operate 'asdf:load-op '#:loopless)
+@end lisp
+
+@noindent Then, simply import the @code{loopless} package
+(nickname @code{ll}) from whatever package you need it.
+
+
+@node LOOP --> Loopless
+@chapter Converting from @code{loop} to Loopless style
+
+In this chapter, you'll find several examples of @code{loop} to
+Loopless conversion. Some design rationales and notes about (what I
+consider to be) good style are included.
+
+@menu
+* Alists and Plists: Alist and Plist Examples. How to process alists (both types) and plists elegantly and uniformly.
+* COLLECTING/WITH-COLLECTORS: COLLECTING/WITH-COLLECTORS Examples. Easy and efficient accumulation of values into one or multiple lists.
+* FOR* Examples::               @code{for*} lets you use @code{loop}'s
+                                ``for-as-arithmetic'' and ``for-as-equals'' anywhere.
+* Trivial Operators: Trivial Operators Examples. Examples for @code{while*}, @code{dovector}, and other intuitive operators.
+* Advanced Examples::           Combining several Loopless utilities to tackle more complex scenarios.
+@end menu
+
+
+@node Alist and Plist Examples
+@section Alist and Plist Examples
+
+Here's a simple example of using @code{mapalist} to map over an alist
+much like @code{mapcar} maps over lists.
+
+@table @asis
+@item Once you know @code{mapl/maplist/mapcon},
+@itemx learning
+@code{mapal/mapalist/mapacon},@*
+@code{mapal*/mapalist*/mapacon*},@*
+@code{mappl/mapplist/mappcon},@*
+@code{mapv/mapvector/mapvcon},@*
+@code{mapt/maptimes/maptcon} and@*
+@code{mapt*/maptimes*/maptcon*} is trivial.
+@end table
+
+A summary table of these @code{mapcar}-like functions is available.@*
+@xref{MAPCAR-like Overview}.
+
+@lisp
+(mapalist (lambda (key value)
+            (list key (- value)))
+          '((a . 1) (b . 2) (c . 3)))
+@equiv{}
+(loop for (key . value) in '((a . 1) (b . 2) (c . 3))
+      collect (list key (- value)))
+@result{} ((A -1) (B -2) (C -3))
+@end lisp
+
+@noindent Convert a "cdr-valued" alist to a "cadr-valued" alist.
+
+@lisp
+(mapalist #'list '((a . 1) (b . 2) (c . 3)))
+@equiv{}
+(loop for (key . value) in '((a . 1) (b . 2) (c . 3))
+      collect (list key value))
+@result{} ((A 1) (B 2) (C 3))
+@end lisp
+
+@noindent Convert a "cadr-valued" alist to a plist.
+
+@lisp
+(mapacon* #'list '((a 1) (b 2) (c 3)))
+@equiv{}
+(loop for (key value) in '((a 1) (b 2) (c 3))
+      nconc (list key value))
+@result{} (A 1 B 2 C 3)
+@end lisp
+
+@noindent Convert a plist to a "cdr-valued" alist.
+
+@lisp
+(mapplist #'cons '(a 1 b 2 c 3))
+@equiv{}
+(loop for (key value) on '(a 1 b 2 c 3) by #'cddr
+      collect (cons key value))
+@result{} ((A . 1) (B . 2) (C . 3))
+@end lisp
+
+@noindent Merge two "cdr-valued" alists into a new one by a process of alternation.
+
+@lisp
+(mapacon (lambda (key1 value1 key2 value2)
+           (list (cons key1 value1) (cons key2 value2)))
+         '((a . 1) (b . 2) (c . 3))
+         '((x . -1) (y . -2) (z . -3)))
+@equiv{}
+(loop for (key1 . value1) in '((a . 1) (b . 2) (c . 3))
+      for (key2 . value2) in '((x . -1) (y . -2) (z . -3))
+      collect (list (cons key1 value1) (cons key2 value2)))
+@result{} ((A . 1) (X . -1) (B . 2) (Y . -2) (C . 3) (Z . -3))
+@end lisp
+
+@noindent This function, used in a few examples below, will handle any
+number of alists or plists automatically. The @code{lambda} form above
+could simply be replaced by @code{(grouper-by-two #'cons).}
+
+@lisp
+(defun grouper-by-two (group-function)
+  (lambda (&rest args)
+    (mappcon (lambda (key value)
+               (list (funcall group-function key value)))
+             args)))
+@end lisp
+
+@noindent Merge any number of alists (``cdr-valued'' or ``cadr-valued'')
+and plists into an alist (``cdr-valued'' or ``cadr-valued'')
+or plist by alternation.
+
+@lisp
+(mapacon (grouper-by-two #'cons)
+         '((a . 1) (b . 2))
+         '((x . -1) (y . -2))
+         '((foo . 8) (bar . 16)))
+@equiv{}
+;; @r{As far as I know, this is the best @code{loop} can do here.}
+;; @r{But the real point is how Loopless simplifies and uniformizes}
+;; @r{processing of alists (both types) and plists.}
+(loop with group = (grouper-by-two #'cons)
+      for (key1 . value1) in '((a . 1) (b . 2))
+      for (key2 . value2) in '((x . -1) (y . -2))
+      for (key3 . value3) in '((foo . 8) (bar . 16))
+      nconc (apply group (list key1 value1 key2 value2 key3 value3)))
+@result{} ((A . 1) (X . -1) (FOO . 8) (B . 2) (Y . -2) (BAR . 16))
+@end lisp
+
+@noindent But what if the data is in 3 different formats
+instead of all being in the same one as above? No problem, just do
+some preconversion.
+
+You might balk at the ``inefficiency'' of this solution, but keep in
+mind that the chances of you having to deal with such a scenario in a
+performance-critical situation where the slowdown introduced by the
+copying would matter are very slim. If that happens, time for some
+custom programming!
+
+@lisp
+(mapacon (grouper-by-two #'cons)
+         '((a . 1) (b . 2))
+         (mapalist* #'cons '((x -1) (y -2)))
+         (mapplist #'cons '(foo 8 bar 16)))
+@equiv{}
+(loop with group = (grouper-by-two #'cons)
+      for (key1 . value1) in '((a . 1) (b . 2))
+      for (key2 value2) in '((x -1) (y -2))
+      for (key3 value3) on '(foo 8 bar 16) by #'cddr
+      nconc (apply group (list key1 value1 key2 value2 key3 value3)))
+@result{} ((A . 1) (X . -1) (FOO . 8) (B . 2) (Y . -2) (BAR . 16))
+@end lisp
+
+There's an example involving mapping over alists and accumulation of
+results into multiple lists with @code{with-collectors} in the
+Advanced Examples section.
+
+
+@node COLLECTING/WITH-COLLECTORS Examples
+@section COLLECTING/WITH-COLLECTORS Examples
+
+Here's two alternatives to @code{loop} you can use when you need to
+@emph{both} @code{collect} into and @code{nconc} onto a fresh list:
+
+@itemize
+@item
+Use @code{collecting} along with an iteration macro (here,
+@code{dolist}).
+
+@item
+Use a nconcing variant of a mapping function. To ``simulate''
+@code{collect}, wrap the value in a list. To ``simulate'' nconc,
+simply return the value. To collect and/or nconc multiple values in
+one iteration, use the normal list operations (@code{nconc},
+@code{append}, backquote, @emph{etc.}) to build up the list.
+
+Here, the @code{mapcan} alternative is not actually using anything new
+provided by Loopless. The standard already provides suitable
+alternatives to @code{loop} for many scenarios; Loopless comes to the
+rescue when that isn't the case.
+@end itemize
+
+@lisp
+(collecting
+  (dolist (element '(a 24 x y 86 "test" (nested stuff)))
+    (typecase element
+      (symbol (collect element))
+      (number (collect (- element)))
+      (list (ncollect (copy-seq element))))))
+@equiv{}
+(mapcan (lambda (element)
+          (typecase element
+            (symbol (list element))
+            (number (list (- element)))
+            (list (copy-seq element))))
+        '(a 24 x y 86 "test" (nested stuff)))
+@equiv{}
+(loop for element in '(a 24 x y 86 "test" (nested stuff))
+      if (symbolp element)
+        collect element
+      else if (numberp element)
+             collect (- element)
+      else if (listp element)
+             nconc (copy-seq element))
+@result{} (A -24 X Y -86 NESTED STUFF)
+@end lisp
+
+Here's how to use @code{with-collectors} to collect into different
+lists simultaneously. Notice how we can use @code{etypecase} because
+we don't have to conform to @code{loop}'s syntax (it's true that
+@code{iterate}, an alternative to @code{loop}, doesn't have that
+problem).
+
+@lisp
+(with-collectors (symbols numbers strings)
+  (dovector (element #(a 24 b "test" 86 "this" c))
+    (etypecase element
+      (symbol (symbols element))
+      (number (numbers element))
+      (string (strings element)))))
+@equiv{}
+(loop for element across #(a 24 b "test" 86 "this" c)
+      if (symbolp element)
+        collect element into symbols
+      else if (numberp element)
+             collect element into numbers
+      else if (stringp element)
+             collect element into strings
+      finally (return (values symbols numbers strings)))
+@result{}
+(A B C)
+(24 86)
+("test" "this")
+@end lisp
+
+
+@node FOR* Examples
+@section @code{for*} Examples
+
+First, here's a trivial example of using ``for-as-arithmetic'' outside
+of @code{loop} with @code{for*}. There is a frequent need to have
+arithmetic stepping of a variable.  Thanks to @code{for*}, you can
+combine @code{loop}'s intuitive syntax for this with any looping
+construct whatsoever. You simply have to wrap the body of the loop
+with @code{for*} and then call @code{step*} at the start of each
+iteration.
+
+@lisp
+(mapcar (for* ((i downfrom 10 by 3))
+          (lambda (element)
+            (step*)
+            (list element i (* i 10))))
+        '(a b c))
+@equiv{}
+(loop for element in '(a b c)
+      for i downfrom 10 by 3
+      collect (list element i (* i 10)))
+@result{} ((A 10 100) (B 7 70) (C 4 40))
+@end lisp
+
+@noindent This next example is illustrative of the following aspects
+of typical @code{for*} usage:
+
+@itemize
+@item
+We strive to put the minimum number of bindings possible in the
+@code{for*}. We'll usually have only one or two. We @emph{could} have
+put the @var{square} binding up there (right below the @var{firstp}
+binding) as @code{(square = (* i i))}, but that would have been
+gratuitous. We should get back into idiomatic Common Lisp as soon as
+possible with good old plain oatmeal @code{let}.
+
+@code{for*} was included in Loopless despite being unidiomatic because
+it's so often useful (if you want to ditch @code{loop}). As such, it
+should be used only when necessary.
+
+Note that there's no other good way to do the stepping of @var{i} and
+@var{firstp} here (assuming we don't want to fall back to
+@code{loop}). Try doing the same without @code{for*} and see where
+that leads you (the multiple references to @var{i} are especially
+problematic).
+
+@item
+@code{for*} never itself terminates looping (more formally, it never
+initiates a non-local exit). As such, it always only provides some
+stepping support for another looping construct (in this case
+@code{mapcar}) without ``overriding'' its semantics.
+
+@item
+@code{for*} should always ``wrap'' the body of the loop as close as
+possible. Here, it's around the @code{lambda} (as it should be), not
+the @code{mapcar}. This avoids needlessly exposing bindings and
+obviously puts the bindings closer to the looping construct's body,
+which is appropriate.
+@end itemize
+
+Note that we couldn't have put the @code{step*} call as the first
+statement in the @code{let}, because then we would have accessed
+@var{i}, a @code{for*} binding, before @code{step*} has been called at
+least once, with undefined consequences.
+
+@lisp
+(mapcar (for* ((i from 1)
+               (firstp = t then nil))
+          (lambda (symbol)
+            (step*)
+            (let ((square (* i i)))
+              (list i
+                    symbol
+                    (if firstp
+                        'first
+                        square)
+                    (- square)))))
+        '(a b c))
+@end lisp
+
+@noindent Here's a big unrealistic example of @code{for*} usage that
+illustrates most of its features. In most situations, you'll use (and
+need) one or two @code{for*} bindings at a time only.
+
+@lisp
+(mapcar (for* ((i downfrom (expt 2 5) by 3)
+               (oddp = (oddp i))
+               (j from 0)
+               (firstp = t then nil)
+               (k downfrom 0 by 2))
+          (lambda (element)
+            (step*)
+            `((element ,element) (i ,i) (oddp ,oddp)
+              (j ,j) (firstp ,firstp) (k ,k)
+              ((+ i j k) ,(+ i j k)))))
+        '(a b c))
+@equiv{}
+(loop for element in '(a b c)
+      for i downfrom (expt 2 5) by 3
+      for oddp = (oddp i)
+      for j from 0
+      for firstp = t then nil
+      for k downfrom 0 by 2
+      collect `((element ,element)
+                (i ,i) (oddp ,oddp)
+                (j ,j) (firstp ,firstp) (k ,k)
+                ((+ i j k) ,(+ i j k))))
+@result{}
+(((ELEMENT A) (I 32) (ODDP NIL) (J 0) (FIRSTP T) (K 0) ((+ I J K) 32))
+ ((ELEMENT B) (I 29) (ODDP T) (J 1) (FIRSTP NIL) (K -2) ((+ I J K) 28))
+ ((ELEMENT C) (I 26) (ODDP NIL) (J 2) (FIRSTP NIL) (K -4) ((+ I J K) 24)))
+@end lisp
+
+
+@node Trivial Operators Examples
+@section Trivial Operators Examples
+
+@code{dotimes*} is @code{dotimes} without an iteration variable. You
+might question the relevance of having such a minute variation on
+@code{dotimes} available. It comes down to a simple question of
+completeness. Loopless strives to always provide an unambiguous ``best
+operator'' in situations where @code{loop} has an answer and the rest
+of Common Lisp either doesn't provide an answer or provides a few
+different answers with no clear winner.
+
+If @code{dotimes*} (and the @code{maptimes*} family of functions)
+didn't exist, each time I wanted to loop a certain number of times
+without caring for the iteration variable, I'd curse having to name
+the variable and be tempted to use @code{loop} for its @code{repeat}
+clause @emph{just this one time}. I'm a @emph{really} lazy programmer,
+and as far as possible, I don't want to have to @emph{think} for
+recurring scenarios!
+
+@lisp
+(dotimes* (3 :done) (write-string "he"))
+@equiv{}
+(loop repeat 3 do (write-string "he"))
+@print{} hehehe
+@result{} :DONE
+@end lisp
+
+@noindent Here's how to read forms from a stream with @code{while*}. 
+This may not look much better than the @code{loop} way at first, but
+notice that each of @code{collecting/collect}, @code{let},
+@code{while*} and @code{setf} does only one thing and can be used with
+the rest of the language.
+
+Also, @code{let} and @code{setf} are conveniently already part of the
+language.
+
+@lisp
+(with-input-from-string (stream "some (simple \"forms\") #(to read)")
+  (collecting
+    (let (form)
+      (while* (setf form (read stream nil nil))
+        (collect form)))))
+@equiv{}
+(with-input-from-string (stream "some (simple \"forms\") #(to read)")
+  (loop for form = (read stream nil nil)
+        while form
+        collect form))
+@result{} (SOME (SIMPLE "forms") #(TO READ))
+@end lisp
+
+
+@node Advanced Examples
+@section Advanced Examples
+
+The @code{mapcar}-like functions are great to accumulate results into
+a single list, but what if we want to accumulate into multiple lists
+in different formats simultaneously according to some category
+criteria? We can simply use the side-effects-only versions of the
+mapping functions (such as @code{mapal}, @code{mapal*} and
+@code{mappl}) along with @code{with-collectors}. If you don't need to
+provide multiple lists to the mapping functions, then I'd recommend
+doing the same with the @code{dolist}-like macros instead.
+
+@lisp
+(defun processor-by-two (process-function)
+  (lambda (&rest args)
+    (mappl process-function args)))
+
+(with-collectors (even-numbered-plist car-list top-car-and-bottom-cdr-alist)
+  (mapal (let ((even-and-car-processor
+                (processor-by-two
+                 (lambda (key value)
+                   (if (evenp value)
+                       (neven-numbered-plist (list key value)))
+                   (car-list key)))))
+           (lambda (&rest args)
+             (apply even-and-car-processor args)
+             (top-car-and-bottom-cdr-alist (cons (car args) (car (last args))))))
+         '((a . 1) (b . 2))
+         '((x . -1) (y . -2))
+         '((foo . 8) (bar . 16))))
+@equiv{}
+;; @r{The @code{loop} version is currently unavailable}
+;; @r{because it's too painful to write. (no kidding!)}
+;; @r{In @code{loop}'s defense, this is a scenario unlikely to happen in the Real World.}
+@result{}
+(FOO 8 B 2 Y -2 BAR 16)
+(A X FOO B Y BAR)
+((A . 8) (B . 16))
+@end lisp
+
+@noindent That's the only advanced example for now, if you come across
+really complex @code{loop}s please send them my way (via the mailing
+list or my personal email address), I can advise you on how to convert
+it to Loopless style if you can't figure it out (or maybe you've found
+a scenario Loopless actually doesn't handle well, I'd love to see
+that!) and perhaps incorporate them as examples here.
+
+
+@node Reference
+@chapter Loopless Reference
+
+This section comprehensively documents all utilities provided by
+Loopless, with examples.  An overview of the different kinds of
+utilities is available in the Introduction.  @xref{Utilities}.
+
+@menu
+* Quick Reference::       A table with a tiny description of each symbol exported by Loopless.
+* MAPCAR-like Functions:: Mapping functions following the lead of @code{mapcar} and friends.
+* DOLIST-like Macros::    Iteration macros following the lead of @code{dolist} and friends.
+* Collection Macros::     Easy and efficient collection of values into one (or multiple) list(s).
+* FOR*::                  Use a subset of @code{loop}'s @code{for} clause to step variables
+                          in conjunction with any looping construct whatsoever.
+* WHILE*::                Execute an implicit @code{tagbody} repeatedly while a condition holds true.
+* COMPOSE::               Takes a list of functions and returns a function that will
+                          pass its argument ``through'' those functions when called.
+@end menu
+
+
+@node Quick Reference
+@section Quick Reference
+
+@multitable {L. Funct} {@code{mapal*/mapalist*/mapacon*}} {Iterate over the conses of a list.}
+@headitem Type @tab Symbol(s) @tab Description
+@item Function @tab @code{mapal/mapalist/mapacon} @tab Map over alists (cdr-valued).
+@item Function @tab @code{mapal*/mapalist*/mapacon*} @tab Map over alists (cadr-valued).
+@item Function @tab @code{mappl/mapplist/mappcon} @tab Map over plists.
+@item Function @tab @code{mapv/mapvector/mapvcon} @tab Map over vectors.
+@item Function @tab @code{mapt/maptimes/maptcon} @tab Map over integers.
+@item Function @tab @code{mapt*/maptimes*/maptcon*} @tab Map over integers (no iter var).
+@item
+@item Macro @tab @code{docons} @tab Iterate over the conses of a list.
+@item Macro @tab @code{doalist} @tab Iterate over an alist (cdr-valued).
+@item Macro @tab @code{doalist*} @tab Iterate over an alist (cadr-valued).
+@item Macro @tab @code{doplist} @tab Iterate over a plist.
+@item Macro @tab @code{dovector} @tab Iterate over a vector.
+@item Macro @tab @code{dotimes*} @tab Same as @code{dotimes}, but no iter var.
+@item
+@item Macro @tab @code{collecting} @tab Collect values into a list.
+@item Macro @tab @code{with-collectors} @tab Collect values into multiple lists.
+@item L. Funct @tab @code{collect} @tab Collect a value for @code{collecting}.
+@item L. Funct @tab @code{ncollect} @tab Collect a list for @code{collecting}.
+@item
+@item Macro @tab @code{for*} @tab Subset of @code{loop} stepping anywhere.
+@item L. Funct @tab @code{step*} @tab Step variables for @code{for*}.
+@item Macro @tab @code{while*} @tab Loop while a condition holds true.
+@item
+@item Macro @tab @code{compose} @tab Compose functions right-associatively.
+@end multitable
+
+
+@node MAPCAR-like Functions
+@section @code{mapcar}-like Functions
+
+Loopless provides many functions analogous to
+@code{mapc/mapcar/mapcan} and @code{mapl/maplist/mapcon} for iteration
+(and possible accumulation of values into a list) over alists, plists,
+vectors and integers.
+
+Not all details of these functions are rehashed here since the
+HyperSpec already provides a thorough description of the Common Lisp
+functions above that serve as a template for the Loopless functions
+below.
+
+@uref{http://www.lispworks.com/documentation/HyperSpec/Body/f_mapc_.htm, Description of @code{mapcar} and friends in the HyperSpec.}
+
+@menu
+* Overview: MAPCAR-like Overview. There's an handy summary table of @code{mapcar}-like functions here.
+* MAPALIST[*] and friends::       Map over alists, whether ``cdr-valued'' or ``cadr-valued''.
+* MAPPLIST and friends::          Map over plists.
+* MAPVECTOR and friends::         Map over vectors.
+* MAPTIMES[*] and friends::       Map over integers, with or without an iteration argument.
+@end menu
+
+
+@node MAPCAR-like Overview
+@subsection Overview of @code{mapcar}-like Functions
+The following functions are analogous to @code{mapc/mapcar/mapcan} and
+@code{mapl/maplist/mapcon} (part of Common Lisp), but for alists,
+plists and vectors.
+
+@noindent Also, with slightly different semantics,
+the @samp{mapt*} family of functions for mapping over integers.
+
+@noindent In the following table, the Common Lisp (CL) functions upon which
+the new Loopless (LL) functions are based are included for
+completeness and comparison.
+
+@multitable {PKG} {Result accumulation method} {@code{mapal*}} {@code{mapalist*}} {@code{mapacon*}}
+@headitem PKG @tab Result accumulation method @tab nil @tab list @tab nconc
+@item @tab Values mapped over
+@ifinfo
+@item @tab ──────────────────
+@end ifinfo
+@item @sc{cl} @tab elements of a list @tab
+@sc{mapc} @tab @sc{mapcar} @tab @sc{mapcan}
+@item @sc{cl} @tab conses of a list @tab
+@sc{mapl} @tab @sc{maplist} @tab @sc{mapcon}
+@item
+@item @sc{ll} @tab (key . value)s of an alist @tab
+@sc{mapal} @tab @sc{mapalist} @tab @sc{mapacon}
+@item @sc{ll} @tab (key value)s of an alist @tab
+@sc{mapal*} @tab @sc{mapalist*} @tab @sc{mapacon*}
+@item @sc{ll} @tab (key value)s of a plist @tab
+@sc{mappl} @tab @sc{mapplist} @tab @sc{mappcon}
+@item @sc{ll} @tab elements of a vector @tab
+@sc{mapv} @tab @sc{mapvector} @tab @sc{mapvcon}
+@item
+@item @sc{ll} @tab integers from 0 below max @tab
+@sc{mapt} @tab @sc{maptimes} @tab @sc{maptcon}
+@item @sc{ll} @tab As above, but no iter var @tab
+@sc{mapt*} @tab @sc{maptimes*} @tab @sc{maptcon*}
+@end multitable
+
+Note that the names of the new functions are constructed in a
+consistent way, based on @code{mapl/maplist/mapcon}.  The behavior is
+more similar to @code{mapc/mapcar/mapcan}, however.
+
+
+@node MAPALIST[*] and friends
+@subsection @code{mapal/mapalist/mapacon} and @code{mapal*/mapalist*/mapacon*}
+
+@cindex mapping over alists
+@cindex alists, mapping over
+
+@defun mapal function &rest alists+ @result{} alist-1
+@defunx mapalist function &rest alists+ @result{} result-list
+@defunx mapacon function &rest alists+ @result{} concatenated-results
+These are analogous to @code{mapc}, @code{mapcar} and @code{mapcan},
+respectively, but for ``cdr-valued'' alists.  The difference is that
+alists are expected and @var{function} will receive two arguments for
+each list element: the @var{key} and @var{value}.
+@end defun
+
+@defun mapal* function &rest alists+ @result{} alist-1
+@defunx mapalist* function &rest alists+ @result{} result-list
+@defunx mapacon* function &rest alists+ @result{} concatenated-results
+Analogous to the non-starred versions above, but for ``cadr-valued'' alists.
+@end defun
+
+
+@node MAPPLIST and friends
+@subsection @code{mappl/mapplist/mappcon}
+
+@cindex mapping over plists
+@cindex plists, mapping over
+
+@defun mappl function &rest plists+ @result{} plist-1
+@defunx mapplist function &rest plists+ @result{} result-list
+@defunx mappcon function &rest plists+ @result{} concatenated-results
+These are analogous to @code{mapc}, @code{mapcar} and @code{mapcan},
+respectively, but for plists.  The difference is that
+plists are expected and @var{function} will receive two arguments for
+each plist key/value pair: the @var{key} and @var{value}.
+@end defun
+
+
+@node MAPVECTOR and friends
+@subsection @code{mapv/mapvector/mapvcon}
+
+@cindex mapping over vectors
+@cindex vectors, mapping over
+
+@defun mapv function &rest vectors+ @result{} vector-1
+@defunx mapvector function &rest vectors+ @result{} result-list
+@defunx mapvcon function &rest vectors+ @result{} concatenated-results
+These are analogous to @code{mapc}, @code{mapcar} and @code{mapcan},
+respectively, but for vectors.  The difference is that
+vectors are expected instead of lists.
+@end defun
+
+
+@node MAPTIMES[*] and friends
+@subsection @code{mapt/maptimes/maptcon} and @code{mapt*/maptimes*/maptcon*}
+
+@cindex mapping over integers
+@cindex mapping over numbers
+@cindex mapping over ranges
+@cindex integers, mapping over
+@cindex numbers, mapping over
+@cindex ranges, mapping over
+
+@defun mapt function count @result{} count
+@defunx maptimes function count @result{} result-list
+@defunx maptcon function count @result{} concatenated-results
+These are @emph{somewhat} analogous to @code{mapc}, @code{mapcar} and
+@code{mapcan}, respectively, but for integers.  The difference is that
+a @var{count} argument is expected instead of one or several lists.
+@var{function} will be called @var{count} times with integers from 0
+to @var{count} - 1 in succession.
+
+Support for specifying a starting integer other than 0 and stepping
+other than +1 might be added in the future.
+@end defun
+
+@defun mapt* function count @result{} count
+@defunx maptimes* function count @result{} result-list
+@defunx maptcon* function count @result{} concatenated-results
+Analogous to the non-starred versions above, but @var{function} takes
+no arguments.
+@end defun
+
+
+@node DOLIST-like Macros
+@section @code{dolist}-like Macros
+
+@menu
+* Overview: DOLIST-like Overview. There's an handy summary table of @code{dolist}-like macros here.
+* DOCONS::              Iterate over the conses of a list.
+* DOALIST[*]::          Iterate over an alist, whether ``cdr-valued'' or ``cadr-valued''.
+* DOPLIST::             Iterate over a plist.
+* DOVECTOR::            Iterate over a vector.
+* DOTIMES*::            Same as @code{dotimes} but without an iteration variable.
+@end menu
+
+
+@node DOLIST-like Overview
+@subsection Overview of @code{dolist}-like Macros
+
+The following macros are analogous to @code{dolist} and
+@code{dotimes}, but for the conses of lists, alists, plists and vectors.
+
+@noindent There's also @code{dotimes*}, which is just like @code{dotimes} but
+without an iteration variable.  This relieves you from naming it when
+you don't need it anyway and makes it clear that you won't.
+
+@multitable {PKG} {As @code{dotimes}, but no iter var} {@sc{doalist*}}
+@headitem PKG @tab Values mapped over @tab name
+@item @sc{cl} @tab elements of a list @tab @sc{dolist}
+@item @sc{cl} @tab integers from 0 below max @tab @sc{dotimes}
+@item
+@item @sc{ll} @tab conses of a list @tab @sc{docons}
+@item @sc{ll} @tab (key . value)s of an alist @tab @sc{doalist}
+@item @sc{ll} @tab (key value)s of an alist @tab @sc{doalist*}
+@item @sc{ll} @tab (key value)s of a plist @tab @sc{doplist}
+@item @sc{ll} @tab elements of a vector @tab @sc{dovector}
+@item @sc{ll} @tab As @code{dotimes}, but no iter var @tab @sc{dotimes*}
+@end multitable
+
+
+@node DOCONS
+@subsection @code{docons}
+
+@cindex iterating over the conses of a list
+@cindex looping over the conses of a list
+@cindex conses of a list, iterating over
+@cindex conses of a list, looping over
+
+@defmac docons (var list &optional result) &body body
+@code{docons} is to @code{mapl} what @code{dolist} is to @code{mapc}.
+
+The usual conventions are respected:
+
+@itemize
+@item
+An implicit @code{block} named @code{nil} surrounds the iteration
+construct.  @code{return} may be used to terminate the loop immediately
+without performing any further iterations, returning zero or more
+values.
+
+@item
+The body of the loop is an implicit @code{tagbody}.
+@end itemize
+@end defmac
+
+
+@node DOALIST[*]
+@subsection @code{doalist} and @code{doalist*}
+
+@cindex iterating over alists
+@cindex looping over alists
+@cindex alists, iterating over
+@cindex alists, looping over
+
+@defmac doalist (key value alist &optional result) &body body
+This is analogous to @code{dolist}, but for ``cdr-valued'' alists.  The
+difference is that an alist is expected and two variable names are
+required: one for the @var{key} and another for the @var{value}.
+
+Throws an error if one of the items in the list is not a list (cons or
+nil).  If an entry is @code{nil}, then both @var{key} and @var{value}
+will be @code{nil}, to reflect the behavior of @code{car} and
+@code{cdr} with a @code{nil} argument (or should this throw an
+error?).
+
+The usual conventions are respected:
+
+@itemize
+@item
+An implicit @code{block} named @code{nil} surrounds the iteration
+construct.  @code{return} may be used to terminate the loop immediately
+without performing any further iterations, returning zero or more
+values.
+
+@item
+The body of the loop is an implicit @code{tagbody}.
+@end itemize
+@end defmac
+
+@defmac doalist* (key value alist &optional result) &body body
+Analogous to the non-starred version above, but for ``cadr-valued'' alists.
+@end defmac
+
+
+@node DOPLIST
+@subsection @code{doplist}
+
+@cindex iterating over plists
+@cindex looping over plists
+@cindex plists, iterating over
+@cindex plists, looping over
+
+@defmac doplist (key value plist &optional result) &body body
+This is analogous to @code{dolist}, but for plists. @* The difference
+is that a plist is expected and two variable names are required: one
+for the @var{key} and another for the @var{value}.
+
+The usual conventions are respected:
+
+@itemize
+@item
+An implicit @code{block} named @code{nil} surrounds the iteration
+construct.  @code{return} may be used to terminate the loop immediately
+without performing any further iterations, returning zero or more
+values.
+
+@item
+The body of the loop is an implicit @code{tagbody}.
+@end itemize
+@end defmac
+
+
+@node DOVECTOR
+@subsection @code{dovector}
+
+@cindex iterating over vectors
+@cindex looping over vectors
+@cindex vectors, iterating over
+@cindex vectors, looping over
+
+@defmac dovector (key value vector &optional result) &body body
+This is analogous to @code{dolist}, but for vectors. @* The difference
+is that a vector is expected.
+
+The usual conventions are respected:
+
+@itemize
+@item
+An implicit @code{block} named @code{nil} surrounds the iteration
+construct.  @code{return} may be used to terminate the loop immediately
+without performing any further iterations, returning zero or more
+values.
+
+@item
+The body of the loop is an implicit @code{tagbody}.
+@end itemize
+@end defmac
+
+
+@node DOTIMES*
+@subsection @code{dotimes*}
+
+@cindex iterating over integers
+@cindex iterating over numbers
+@cindex iterating over ranges
+@cindex looping over integers
+@cindex looping over numbers
+@cindex looping over ranges
+
+@cindex integers, iterating over
+@cindex numbers, iterating over
+@cindex ranges, iterating over
+@cindex integers, looping over
+@cindex numbers, looping over
+@cindex ranges, looping over
+
+@defmac dotimes* (count &optional result) &body body
+This is exactly like @code{dotimes} except without an (accessible)
+iteration variable.  This saves you from having to name the variable
+and makes explicit the fact you won't need its value.
+
+The usual conventions are respected:
+
+@itemize
+@item
+An implicit @code{block} named @code{nil} surrounds the iteration
+construct.  @code{return} may be used to terminate the loop immediately
+without performing any further iterations, returning zero or more
+values.
+
+@item
+The body of the loop is an implicit @code{tagbody}.
+@end itemize
+@end defmac
+
+
+@node Collection Macros
+@section Collection Macros
+
+These macros were originally from the @code{cl-utilities} library.@* I
+added support for @code{nconc}-style collection @* and formalized
+better return values for @code{collect}.
+
+@menu
+* COLLECTING::      Collect values into a list efficiently, then return that list.
+* WITH-COLLECTORS:: Collect values into multiple lists efficiently,
+                    then return those lists as multiple values.
+@end menu
+
+
+@node COLLECTING
+@subsection @code{collecting}
+
+@cindex collecting into a list
+@cindex nconcing onto a list
+@cindex list, collecting into
+@cindex list, nconcing onto
+
+@defmac collecting &body body @result{} list
+@code{collecting} allows for easy and efficient collection of values
+into a list.
+
+Evaluate @var{body} as an implicit @code{progn}.  Within @code{body},
+the local functions @code{collect} and @code{ncollect} can be used to
+accumulate values into a list.  If @var{body} finishes normally, this
+list is returned.
+
+@code{collect} and @code{ncollect} are described below.
+
+@code{collecting} was copied from the @code{cl-utilities} library. @*
+I added @code{ncollect} support.
+@end defmac
+
+@deffn {Local Function} collect thing @result{} thing
+Collect @var{thing} in the context established by the
+@code{collecting} macro.  Return @var{thing}.
+@end deffn
+
+@deffn {Local Function} ncollect list @result{} nil
+Destructively collect @var{list} in the context established by the
+@code{collecting} macro as if by @code{nconc}.  Return @code{nil}
+(returning @var{list} by analogy with @code{collect} would be unwise
+because its tail will be destructively modified soon unless it's the
+last thing we collect into the list).  This is equivalent to
+@code{(mapc #'collect list)} except faster (because no consing) and
+@var{list} must be prepared to have its tail destructively modified
+the next time @code{collect} or @code{ncollect} is called.
+
+@strong{Design note:} Calling this function @code{ncollect} has at
+least two advantages:
+
+@enumerate
+@item
+The @samp{n} prefix reminds you that you must pass a fresh list that
+isn't referenced anywhere else because of the destructive behavior;
+(its tail will be modified the next time @code{collect} or
+@code{ncollect} is called).
+
+@item
+@samp{NCOllect} starts the same as @samp{NCOnc}.
+@end enumerate
+
+Other candidates would have been @code{collect-list} (a bit long) and
+@code{nconcing} (potential conflict with @code{iterate})."
+@end deffn
+
+
+@node WITH-COLLECTORS
+@subsection @code{with-collectors}
+
+@cindex collecting into lists
+@cindex nconcing onto lists
+@cindex lists, collecting into
+@cindex lists, nconcing onto
+
+@defmac with-collectors (&rest collectors) &body body @result{} list*
+@code{with-collectors} allows for easy and efficient collection of values
+into multiple lists.  These lists are then returned as multiple values.
+
+This works exactly the same way as @code{collecting}, except instead
+of accumulating into one list with @code{collect} and @code{ncollect},
+we accumulate into multiple lists with collection functions named with
+@var{collectors}.
+
+Said another way:
+
+@lisp
+(collecting @var{body}) @equiv{} (with-collectors (collect) @var{body})
+@end lisp
+
+Each @var{collector} in @var{collectors} is one of the following:
+
+@table @asis
+@item an interned symbol
+In that case
+
+@item an ``apparently uninterned'' symbol, as produced by @code{gensym}
+In that case...
+
+@item a list of two symbols
+In that case...
+@end table
+
+The addition of the @code{ncollect} feature adds a very small
+possibility of name conflicts.  For example, a collector named
+@code{conc} would generate an @code{nconc} local function, which is
+illegal according to the standard (can't override definitions of
+symbols in the Common Lisp package) so you'll get an error.  Simply
+choose another name if this happens.
+
+Note that if you name a collector with an ``apparently-uninterned''
+symbol (as generated by @code{gensym} for macros), the
+@code{ncollect}-style function won't be automatically generated
+because its name should be a gensym too, but then there's no way to
+refer to it. If you need the @code{ncollect}-style function, then
+assign an explicit name to it with the list form of collector names
+(notice how you can use @code{nil} in place of the name of the
+@code{list}-style collector if you don't need it).
+
+@lisp
+;; @r{Obviously contrived example.}
+;; @r{@code{maptcon} would be more appropriate.}
+(defmacro count-to-plist ((var count) value)
+  (let ((ncollector (gensym "NCOLLECTOR")))
+    `(with-collectors ((nil ,ncollector))
+       (dotimes (,var ,count)
+         (,ncollector (list ,var ,value))))))
+
+(count-to-plist (i 3) (* i 3))
+@result{} (0 0 1 3 2 6)
+@end lisp
+
+@strong{Documentation design note:} Since @code{with-collectors} is
+the more general construct, I guess @code{collecting} should be
+described in terms of it instead of the other way around, but at
+least, doing it like this has the advantage of having the descriptions
+of @code{collect} and @code{ncollect} along with the main text.
+@end defmac
+
+
+@node FOR*
+@section @code{for*}
+
+@cindex stepping variables
+@cindex variable stepping
+@cindex incrementing variables
+@cindex decrementing variables
+@cindex for-as-arithmetic, for clause
+@cindex for-as-equals, for clause
+@cindex from, for clause
+@cindex downfrom, for clause
+@cindex upfrom, for clause
+
+@defmac for* bindings &body body @result{} body-value*
+@code{for*} steps variables with support for a small but useful subset
+of @code{loop}'s @code{for} clause, which you can combine with any
+looping construct whatsoever.  Simply wrap the looping construct with
+@code{for*} and then call the local function @code{step*} at the start
+of each loop body iteration.  The first time @code{step*} is called,
+the variables are initialized to their first value.  On subsequent
+calls, the values are updated.  The updates are always made in
+sequence, analogously to @code{let*} and @code{setf}.  It is not
+semantically meaningful to read the variables before @code{step*} has
+been called at least once.
+
+@code{for*} deals with stepping of variables only.  It never initiates
+a termination of looping.  This is to avoid interfering with the
+semantics of the looping construct we're wrapping. If you find
+yourself wishing for such a feature, then simply make the termination
+test right at the start of the looping construct's body (right after
+the @code{step*} call) and use any appropriate non-local exit
+construct.
+
+Each @var{binding} in @var{bindings} is of the form @code{(@var{var}
+. @var{stepping})}.  Here are the supported @var{stepping} clauses:
+
+@table @asis
+@item for-as-arithmetic
+You can use @code{from}, @code{upfrom}, @code{downfrom} and @code{by}
+like you would with @code{loop}: @code{from @var{start}} or
+@code{upfrom @var{start}} for incrementing from @var{start},
+@code{downfrom @var{start}} for decrementing.  Use @code{by
+@var{step}}, a non-negative integer, to control the stepping (default
+is 1).
+
+Here's an example of a @code{for} @var{binding} clause to create a
+local variable @var{index} that will successively take the values
+@samp{10, 7, 4, 1, -2}, @emph{etc.}:
+
+@lisp
+(index downfrom 10 by 3)
+@end lisp
+
+@item for-as-equals
+You can use @code{=} and @code{then} like you would with
+@code{loop}. There are two possible forms of this statement:
+
+@lisp
+(@var{var} = @var{form})
+@end lisp
+
+In this case, a binding @var{var} is created, and will be set to the
+value @var{form} evaluates to on each iteration. Note that it is
+stylistically inappropriate to use this form of stepping if there is
+no further @code{for*} binding which needs to refer to the value of
+this variable. Use a more conventional binding construct such as
+@code{let} inside the body of the loop instead.
+
+@lisp
+(@var{var} = @var{first-form} then @var{then-form})
+@end lisp
+
+In this case, a binding @var{var} is created, and will be set to the
+value @var{first-form} evaluates to on the first iteration (the first
+time @code{step*} is called), and then to the value @var{then-form}
+evaluates to on subsequent iterations.
+
+@end table
+@end defmac
+
+@deffn {Local Function} step* @result{} nil
+@code{step*} is used inside @code{for*} to step the variables.
+@* Its semantics are described in the definition of @code{for*} above.
+@end deffn
+
+
+@node WHILE*
+@section @code{while*}
+
+@cindex infinite loop
+@cindex looping infinitely
+
+@defmac while* test &body body @result{} nil
+Evaluate @var{body} as an implicit @code{tagbody} repeatedly while
+@var{test} evaluates to true, then return @code{nil}.  An implicit
+@code{block} named @code{nil} surrounds @code{while*}.  @code{return}
+may be used to terminate the loop immediately without performing any
+further iterations, returning zero or more values.
+
+Specifically:
+
+@enumerate
+@item
+Evaluate @var{test} to produce @var{test-result}.
+
+@item
+If @var{test-result} is true, evaluate @var{body} as an implicit
+@code{tagbody} and go back to step 1.  Else, terminate and return @code{nil}.
+@end enumerate
+
+The following simple optimizations are performed:
+
+@itemize
+@item
+If @var{test} is @code{t}, then an efficient infinite loop (with only
+an unconditional jump, no test) will be generated.
+
+@item
+If @var{test} is @code{nil}, then @code{while*} simply expands to nil.
+@end itemize
+@end defmac
+
+
+@node COMPOSE
+@section @code{compose}
+
+@cindex composing functions
+@cindex function composition
+
+@defun compose &rest functions @result{} composed-function
+Compose @var{functions} right-associatively, returning
+@var{composed-function}.
+
+If @code{compose} was called with zero arguments, then
+@var{composed-function} acts as the @code{identity} function except it
+accepts and ignores any number of arguments beyond the first. That is,
+it accepts any number of arguments except 0 and always returns the
+first one.
+
+If @code{compose} was called with one argument, @var{function}, then
+@var{composed-function} @emph{is} @var{function}.
+
+If @code{compose} was called with two or more arguments, then let
+@var{rfunctions} be the result of evaluating @code{(reverse
+@var{functions})}. The arguments passed to @var{composed-function} are
+passed as-is to the first function in @var{rfunctions}, returning
+@var{result1} (only the first value is retained). Then @var{result1}
+is passed to the second function in @var{rfunctions}, returning
+@var{result2}, and so on until there are no more functions to
+call. @var{composed-function} returns the multiple values returned by
+the last function.
+
+To recapitulate the effects of multiple arguments and values:
+
+@itemize
+@item
+The last function in @var{functions} (the first to be called) can
+accept or require many arguments. The other functions must be able to
+accept a single argument.
+
+@item
+The first function in @var{functions} (the last to be called) can
+return multiple values. The other functions can return multiple values
+but only the first value will be retained and passed to the next
+function.
+@end itemize
+
+@strong{Design notes:} There are a few different sets of semantics one
+might consider for @code{compose} with respect to multiple arguments
+and return values. I thought I'd document why I chose the particular
+set explained above.
+
+A central issue is that I strongly feel that calling @code{(compose
+@var{my-function})} should simply return @var{my-function}. Regardless
+of the fact you'd rarely want to call @code{compose} with one
+argument, I feel this is a semantically meaningful base case. I see no
+good reason to impose restrictions on the number of arguments
+@var{my-function} should take or how many values it should
+return. Anyway, trying to enforce these restrictions would carry a
+performance penalty.
+
+Presuming we want to stay consistent with this base case, it follows
+that no matter how many functions @code{compose} is called with, the
+first function that will be called should be able accept any number of
+arguments it wants, and the last one should be able to return as many
+values as it wants.
+
+As for what happens with the functions in the middle, it would be
+possible to pass any multiple values into the next function, such that
+returning 3 values, for example, would call the next function with 3
+arguments. But I really don't think that feature would be used often
+(at least I never personally wished to use it), and I think dealing
+with potential multiple values like this with
+@code{multiple-value-call} aught to have at least a small performance
+penalty. Paying a performance cost for a very rarely used feature is
+not my idea of fun.
+
+There's also the possibility of forgetting that one of the functions
+you're using as middle returns multiple values, which might happen if
+you usually only deal with its first value, which is typically the
+most important and the most often used. You'd get a sometimes-cryptic
+``Wrong number of arguments.'' error.
+@end defun
+
+
+@node Unlicense
+@appendix Unlicense
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+
+@node Avoiding Conflicts
+@appendix Avoiding Conflicts
+
+@cindex avoiding conflicts
+@cindex avoiding symbol conflicts
+@cindex avoiding package conflicts
+@cindex conflicts, avoiding
+@cindex symbol conflicts, avoiding
+@cindex package conflicts, avoiding
+@cindex resolving conflicts
+@cindex resolving symbol conflicts
+@cindex resolving package conflicts
+@cindex conflicts, resolving
+@cindex symbol conflicts, resolving
+@cindex package conflicts, resolving
+@cindex solving conflicts
+@cindex solving symbol conflicts
+@cindex solving package conflicts
+@cindex conflicts, solving
+@cindex symbol conflicts, solving
+@cindex package conflicts, solving
+
+Some Loopless symbols may conflict with "base utilities" packages such
+as @code{cl-utilities}.  If you intend to use both Loopless and one such
+library that exports these symbols from within the same package,
+you'll have to deal with these conflicts somehow.
+
+The symbols most likely to cause conflicts are:
+
+@itemize @bullet
+@item
+@code{collecting}
+@item
+@code{collect}
+@item @code{ncollect}
+@item @code{with-collectors}
+@item @code{compose}
+@end itemize
+
+Here are two ways to deal with these conflicts:
+
+@enumerate
+@item
+You can of course deal with these conflicts in the usual way with
+shadowing imports.  Here's what your package declaration might look like:
+
+@lisp
+(defpackage #:my-package
+  (:use #:cl
+        #:loopless
+        #:other-utilities-package)
+  (:shadowing-import-from #:loopless
+                          #:collecting
+                          #:collect
+                          #:ncollect
+                          #:with-collectors
+                          #:compose))
+@end lisp
+
+@item
+Or, if you want Loopless to ``back off'' and not export the symbols
+likely to cause conflicts in the first place, simply use this prior to
+loading Loopless:
+
+@lisp
+(pushnew :loopless-noconflict *features*)
+@end lisp
+
+It's still possible to use the aforementioned symbols by prefixing
+them with @samp{loopless:} or @samp{ll:}.
+@end enumerate
+
+A third way which might be supported in the future is simply using an
+alternate package named @code{loopless-noconflict} or similar, which
+would be just like the @code{loopless} package but wouldn't export the
+symbols expected to be problematic.
+
+
+@node Star Suffix
+@appendix Star Suffix
+
+@cindex star suffix
+@cindex * suffix
+@cindex suffix, star
+@cindex suffix, *
+
+Several of Loopless' utilities have @samp{*} as a suffix. @* This is,
+of course, because Loopless is an ALL-STAR library! @* Joking aside,
+here's a full breakdown of why for each operator:
+
+@table @asis
+@item Slight variation on another operator
+@table @code
+@item mapal*/mapalist*/mapacon*
+@itemx doalist*
+These are just like the non-starred equivalents except they consider
+the value to be in the second element instead of the cdr.
+
+@item mapt*/maptimes*/maptcon*
+@itemx dotimes*
+These are just like the non-starred equivalents except you don't have
+to (and must not) supply a variable name.  This relieves you from
+having to name and then ignore the variable if you won't be using it
+anyway and makes it clear that you won't (useful if you have a big
+code block).
+@end table
+
+
+@item Protection against symbol conflicts and programmer confusion
+@table @code
+@item for*
+@itemx while*
+To avoid symbol conflicts and potential programmer confusion with the
+@code{loop} keywords @code{for} and @code{while}.  These are also
+``clashy'' names that other utility libraries might use (but maybe I'm
+just paranoid).
+
+Anyway, the semantics differ between the loop keywords and these new
+operators so it makes sense to give them a different name.  Just adding
+a @samp{*} is short and simple.
+
+Also, the binding of variables is done sequentially as in @code{let*},
+@code{do*} and @code{prog*}.
+
+As a minor bonus, adding the suffix to @code{for} is consistent with
+its local function @code{step*}, which itself cannot use just
+@code{step} as a name.
+
+@item step*
+The @code{step*} local function is used inside @code{for*} to step the
+variables.  Common Lisp already provides a @code{step} macro, which is
+an unrelated operator to aid debugging.
+
+Here again, the semantics differ (this time wildly) so using a
+different name is appropriate.
+@end table
+@end table
+
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye
